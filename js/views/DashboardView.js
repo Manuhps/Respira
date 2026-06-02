@@ -1,6 +1,8 @@
-export default class DashboardView {
+import BaseView from './BaseView.js';
+
+export default class DashboardView extends BaseView {
     constructor() {
-        this.appElement = document.getElementById('app');
+        super();
         this.breathTimeout1 = null;
         this.breathTimeout2 = null;
         this.breathTimeout3 = null;
@@ -12,36 +14,58 @@ export default class DashboardView {
         clearTimeout(this.breathTimeout3);
     }
 
-    renderLanding(onLoginCallback) {
-        this.clearTimeouts();
-        this.appElement.innerHTML = `
-            <div class="screen landing">
-                <h1>Respira</h1>
-                <p>O teu espaço compassivo e seguro para treinares habilidades sociais e superares a ansiedade passo-a-passo.</p>
-                <input type="text" id="nameInput" placeholder="Como gostas de ser chamado?" />
-                <button id="loginBtn">Entrar na Aplicação</button>
-            </div>
-        `;
+    getAvatarInfo(points) {
+        if (points >= 300) {
+            return {
+                src: "./assets/avatar-happy.png",
+                label: "Avatar alegre"
+            };
+        }
 
-        document.getElementById('loginBtn').addEventListener('click', () => {
-            const name = document.getElementById('nameInput').value.trim();
-            if (name !== '') onLoginCallback(name);
-        });
+        if (points >= 100) {
+            return {
+                src: "./assets/avatar-neutral.png",
+                label: "Avatar neutro"
+            };
+        }
+
+        return {
+            src: "./assets/avatar-sad.png",
+            label: "Avatar triste"
+        };
     }
 
-    renderDashboard(userName, points, catalogCallback, breathingCallback, logoutCallback) {
+    renderDashboard(userName, points, catalogCallback, breathingCallback, logoutCallback, profileCallback) {
         this.clearTimeouts();
+
+        const avatar = this.getAvatarInfo(points);
+
         this.appElement.innerHTML = `
             <div class="screen dashboard">
-                <h1>Bem-vindo, ${userName}! ✨</h1>
+                <div class="topbar">
+                    <div class="logo">Respira</div>
+                    <button id="btnProfile" class="btn-profile">Perfil</button>
+                </div>
+
+                <div class="avatar-area">
+                    <img src="${avatar.src}" alt="${avatar.label}" class="avatar-img" />
+                    <p class="avatar-label">${avatar.label}</p>
+                </div>
+
+                <h1>Bem-vindo, ${userName}! </h1>
                 <div class="stats">
-                    <p>Os teus pontos de superação</p>
-                    <h2>⭐ ${points}</h2>
+                    <p>Os teus Pontos de Brisa</p>
+                    <h2>🌬️ ${points}</h2>
                 </div>
                 <div class="options">
-                    <button id="btnCatalog">📖 Catálogo de Desafios</button>
-                    <button id="btnBreathe">🧘 Exercício de Respiração</button>
-                    <button id="btnLogout" class="btn-secondary">Sair da Aplicação</button>
+                    <button id="btnCatalog">Catálogo de Desafios</button>
+                    <button id="btnBreathe">Exercício de Respiração</button>
+                    <button id="btnLogout" class="btn-secondary">Sair da Viagem</button>
+                </div>
+
+                <div class="floating-bubbles">
+                    <button id="bubbleInfo" class="float-bubble bubble-info" title="O que é a ansiedade social?">i</button>
+                    <button id="bubbleResources" class="float-bubble bubble-resources" title="Recursos de respiração">▶</button>
                 </div>
             </div>
         `;
@@ -49,6 +73,162 @@ export default class DashboardView {
         document.getElementById('btnCatalog').addEventListener('click', catalogCallback);
         document.getElementById('btnBreathe').addEventListener('click', breathingCallback);
         document.getElementById('btnLogout').addEventListener('click', logoutCallback);
+
+        const profileBtn = document.getElementById('btnProfile');
+        if (profileBtn && profileCallback) {
+            profileBtn.addEventListener('click', profileCallback);
+        }
+
+        const bubbleInfo = document.getElementById('bubbleInfo');
+        if (bubbleInfo) {
+            bubbleInfo.addEventListener('click', (event) => {
+                event.preventDefault();
+                this.renderInfoModal();
+            });
+        }
+
+        const bubbleResources = document.getElementById('bubbleResources');
+        if (bubbleResources) {
+            bubbleResources.addEventListener('click', (event) => {
+                event.preventDefault();
+                this.renderResourcesModal();
+            });
+        }
+    }
+
+    renderProfileModal(userName, points, quote, adminCallback) {
+        this.closeModal();
+
+        const avatar = this.getAvatarInfo(points);
+
+        const overlay = document.createElement('div');
+        overlay.id = 'respira-modal-overlay';
+        overlay.className = 'modal-overlay';
+
+        overlay.innerHTML = `
+            <div class="modal profile-modal" role="dialog" aria-modal="true">
+                <button type="button" class="modal-close" id="profile-modal-close">&#10005;</button>
+                <h3 class="modal-title">Perfil</h3>
+
+                <div class="profile-avatar">
+                    <img src="${avatar.src}" alt="${avatar.label}" class="profile-avatar-img" />
+                    <p class="avatar-label">${avatar.label}</p>
+                </div>
+
+                <div class="profile-grid">
+                    <div class="profile-row">
+                        <span>Username</span>
+                        <strong>${userName}</strong>
+                    </div>
+                    <div class="profile-row">
+                        <span>Pontos de Brisa</span>
+                        <strong>${points}</strong>
+                    </div>
+                </div>
+
+                <p class="quote">"${quote}"</p>
+
+                <button type="button" id="btnAdminSecret" class="admin-secret" title="Preparar modo admin">Admin</button>
+                <p id="admin-flag-msg" class="admin-flag-msg"></p>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const closeBtn = document.getElementById('profile-modal-close');
+        closeBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            this.closeModal();
+        });
+
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) {
+                this.closeModal();
+            }
+        });
+
+        const adminBtn = document.getElementById('btnAdminSecret');
+        const adminMsg = document.getElementById('admin-flag-msg');
+
+        adminBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            if (adminCallback) adminCallback();
+            if (adminMsg) adminMsg.textContent = "Modo admin preparado.";
+        });
+    }
+
+    renderInfoModal() {
+        this.closeModal();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'respira-modal-overlay';
+        overlay.className = 'modal-overlay';
+
+        overlay.innerHTML = `
+            <div class="modal info-modal" role="dialog" aria-modal="true">
+                <button type="button" class="modal-close" id="info-modal-close">&#10005;</button>
+                <h3 class="modal-title">O que é a Ansiedade Social?</h3>
+                <p class="info-text">A ansiedade social é o medo persistente de ser julgado em situações sociais. É comum sentires o coração acelerado, tensão muscular ou vontade de evitar. A boa notícia é que o treino gradual ajuda a reduzir esse medo.</p>
+                <p class="info-text">Aqui podes praticar com calma, no teu ritmo, e celebrar cada pequeno progresso.</p>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const closeBtn = document.getElementById('info-modal-close');
+        closeBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            this.closeModal();
+        });
+
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) {
+                this.closeModal();
+            }
+        });
+    }
+
+    renderResourcesModal() {
+        this.closeModal();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'respira-modal-overlay';
+        overlay.className = 'modal-overlay';
+
+        overlay.innerHTML = `
+            <div class="modal resources-modal" role="dialog" aria-modal="true">
+                <button type="button" class="modal-close" id="resources-modal-close">&#10005;</button>
+                <h3 class="modal-title">Recursos de Respiração</h3>
+                <p class="info-text">Experimenta estas dicas rápidas:</p>
+                <ul class="tips">
+                    <li>Respira 4-7-8 por 3 ciclos.</li>
+                    <li>Relaxa ombros e maxilar.</li>
+                    <li>Foca nos sentidos (5-4-3-2-1).</li>
+                    <li>Bebe água e faz pausas curtas.</li>
+                </ul>
+                <iframe
+                    class="relax-video"
+                    src="https://www.youtube.com/embed/eVFzbxmKNUw"
+                    title="Como ganhar confiança"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                ></iframe>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const closeBtn = document.getElementById('resources-modal-close');
+        closeBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            this.closeModal();
+        });
+
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) {
+                this.closeModal();
+            }
+        });
     }
 
     renderCatalog(scenarios, playScenarioCallback, backCallback) {
@@ -65,7 +245,6 @@ export default class DashboardView {
                 <div class="options catalog-list">
                     ${buttonsHtml}
                 </div>
-                <button id="btnBack" class="btn-secondary" style="margin-top: 30px;">Voltar ao Dashboard</button>
             </div>
         `;
 
@@ -77,7 +256,7 @@ export default class DashboardView {
             });
         });
 
-        document.getElementById('btnBack').addEventListener('click', backCallback);
+        this.renderBackButton(backCallback);
     }
 
     renderBreathing(backCallback) {
@@ -91,12 +270,10 @@ export default class DashboardView {
                     <div id="breatheCircle" class="breathe-circle"></div>
                     <div id="breatheText" class="breathe-text">Prepara-te...</div>
                 </div>
-
-                <button id="btnBack" class="btn-secondary" style="margin-top: 40px;">Parar e Voltar</button>
             </div>
         `;
 
-        document.getElementById('btnBack').addEventListener('click', () => {
+        this.renderBackButton(() => {
             this.clearTimeouts();
             backCallback();
         });
@@ -108,12 +285,11 @@ export default class DashboardView {
         const circle = document.getElementById('breatheCircle');
         const text = document.getElementById('breatheText');
         
-        if (!circle || !text) return; // Segurança caso o utilizador saia do ecrã
+        if (!circle || !text) return;
 
         const cycle = () => {
             if (!document.getElementById('breatheCircle')) return;
 
-            // Fase 1: Inspirar 4s
             text.innerText = "Inspira (4s)";
             circle.style.transition = "transform 4s linear, background-color 4s";
             circle.style.transform = "scale(1.8)";
@@ -122,7 +298,6 @@ export default class DashboardView {
             this.breathTimeout1 = setTimeout(() => {
                 if (!document.getElementById('breatheCircle')) return;
                 
-                // Fase 2: Suster 7s
                 text.innerText = "Sustém (7s)";
                 circle.style.backgroundColor = "var(--color-10)";
                 circle.style.color = "var(--color-black)";
@@ -130,7 +305,6 @@ export default class DashboardView {
                 this.breathTimeout2 = setTimeout(() => {
                     if (!document.getElementById('breatheCircle')) return;
                     
-                    // Fase 3: Expirar 8s
                     text.innerText = "Expira (8s)";
                     circle.style.transition = "transform 8s linear, background-color 8s";
                     circle.style.transform = "scale(1)";
@@ -143,7 +317,6 @@ export default class DashboardView {
             }, 4000);
         };
 
-        // Delay inicial pequenino para o render acontecer primeiro
         this.breathTimeout1 = setTimeout(cycle, 1000);
     }
 }

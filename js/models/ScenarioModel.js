@@ -3,7 +3,7 @@ export default class ScenarioModel {
         this.scenarios = [
             {
                 id: 1,
-                title: '🛒 No Supermercado',
+                title: 'No Supermercado',
                 text: 'A caixa do supermercado enganou-se no troco e deu-te menos 2 euros. A fila atrás de ti está grande.',
                 options: [
                     { text: 'Ficas calado e vais embora para não atrapalhar a fila.', points: 0, feedback: 'Evitaste a situação por medo do confronto. Tenta ser mais assertivo, os teus direitos importam!' },
@@ -13,7 +13,7 @@ export default class ScenarioModel {
             },
             {
                 id: 2,
-                title: '🏫 Apresentação na Aula',
+                title: 'Apresentação na Aula',
                 text: 'O professor chamou o teu nome para apresentar o trabalho perante a turma inteira. Sentes o coração a bater muito forte.',
                 options: [
                     { text: 'Levantas-te devagar, respiras fundo 1 vez e começas a falar.', points: 10, feedback: 'Muito bem! Usaste a âncora da respiração (ancoragem) e enfrentaste de imediato a situação.' },
@@ -23,7 +23,7 @@ export default class ScenarioModel {
             },
             {
                 id: 3,
-                title: '📱 Falar ao Telemóvel',
+                title: 'Falar ao Telemóvel',
                 text: 'O teu telemóvel está a tocar. É um número que não tens gravado e estás à espera de uma resposta sobre uma entrevista.',
                 options: [
                     { text: 'Deixas tocar até ao fim e depois pesquisas o número no Google.', points: 0, feedback: 'A evitação prolonga a tua ansiedade. Enfrentar a chamada quebra imediatamente o ciclo da preocupação.' },

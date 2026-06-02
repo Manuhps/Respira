@@ -1,6 +1,8 @@
-export default class ScenarioView {
+import BaseView from './BaseView.js';
+
+export default class ScenarioView extends BaseView {
     constructor() {
-        this.appElement = document.getElementById('app');
+        super();
     }
 
     renderScenario(scenario, optionSelectedCallback, backCallback) {
@@ -15,7 +17,6 @@ export default class ScenarioView {
                 <div class="options">
                     ${optionsHtml}
                 </div>
-                <button id="btnCancel" class="btn-secondary" style="margin-top: 20px;">Desistir do Desafio</button>
             </div>
         `;
 
@@ -26,19 +27,19 @@ export default class ScenarioView {
             });
         });
 
-        document.getElementById('btnCancel').addEventListener('click', backCallback);
+        this.renderBackButton(backCallback);
     }
 
     renderFeedback(feedbackMsg, pointsGained, continueCallback) {
-        let titleBlock = pointsGained > 0 ? "🎉 Excelente Trabalho!" : "🫂 Continua a Tentar";
-        let pointsBlock = pointsGained > 0 ? `<p class="points-gain">+${pointsGained} Pontos Adquiridos!</p>` : '';
+        let titleBlock = pointsGained > 0 ? "Excelente Trabalho!" : "Continua a Tentar";
+        let pointsBlock = pointsGained > 0 ? `<p class="points-gain">+${pointsGained} Pontos de Brisa!</p>` : '';
 
         this.appElement.innerHTML = `
             <div class="screen feedback">
                 <h2>${titleBlock}</h2>
                 <div class="scenario-text">${feedbackMsg}</div>
                 ${pointsBlock}
-                <button id="btnContinue" style="margin-top: 30px;">Concluir e Voltar</button>
+                <button id="btnContinue" style="margin-top: 30px;">Concluir</button>
             </div>
         `;
 
