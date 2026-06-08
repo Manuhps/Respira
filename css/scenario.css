@@ -25,7 +25,7 @@
 .feedback p {
     font-weight: bold;
     font-size: 20px;
-    color: var(--color-white);
+    color: var(--text-main);
 }
 
 .points-gain {

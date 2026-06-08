@@ -10,8 +10,8 @@ export default class AuthView extends BaseView {
             <div class="screen auth">
                 <h2>Bem-vindo de volta!</h2>
                 <form id="login-form">
-                    <input type="email" id="email-input" placeholder="O teu email" required />
-                    <input type="password" id="password-input" placeholder="A tua password" required />
+                    <input type="email" id="email-input" placeholder="O teu email" autocomplete="email" required />
+                    <input type="password" id="password-input" placeholder="A tua password" autocomplete="current-password" required />
                     <button type="submit">Entrar</button>
                 </form>
             </div>
@@ -36,8 +36,8 @@ export default class AuthView extends BaseView {
                 <form id="register-form" style="display: flex; flex-direction: column; align-items: center; width: 100%;">
                     <input type="text" id="fname-input" placeholder="Primeiro Nome" required />
                     <input type="text" id="lname-input" placeholder="Último Nome" required />
-                    <input type="email" id="email-input" placeholder="Email" required />
-                    <input type="password" id="password-input" placeholder="Password" required />
+                    <input type="email" id="email-input" placeholder="Email" autocomplete="email" required />
+                    <input type="password" id="password-input" placeholder="Password" autocomplete="new-password" required />
                     <input type="date" id="bdate-input" required title="Data de Nascimento" />
                     <select id="gender-input" required>
                         <option value="" disabled selected>Género</option>

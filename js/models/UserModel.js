@@ -1,3 +1,16 @@
+/**
+ * UserModel — Gere os dados dos utilizadores da aplicação Respira.
+ * 
+ * Cada utilizador tem:
+ * - Dados pessoais (nome, email, password, etc.)
+ * - Role ('user' ou 'admin')
+ * - Gamificação (breezePoints, ventinhos, exerciseStreak)
+ * - Favoritos (array de IDs de cenários)
+ * - Histórico de exercícios (completedExercises)
+ * - Badges conquistados (array de IDs)
+ * 
+ * Tudo é persistido no localStorage.
+ */
 export default class UserModel {
     #user;
 
@@ -6,6 +19,7 @@ export default class UserModel {
         this.loadCurrentUser();
     }
 
+    // ── Carregar o utilizador atual (se houver sessão) ──
     loadCurrentUser() {
         const currentUserEmail = localStorage.getItem('respira_current_user');
         if (currentUserEmail) {
@@ -17,14 +31,13 @@ export default class UserModel {
         }
     }
 
+    // ── Ler lista de utilizadores do localStorage (com migração) ──
     getUsers() {
-        // Lê lista de utilizadores do localStorage.
-        // Compatibilidade: versões antigas guardavam `nickname` em vez de `username`.
         const users = JSON.parse(localStorage.getItem('respira_users')) || [];
         let hasMigration = false;
 
         users.forEach((u) => {
-            // Se não existir username, tentamos migrar de nickname.
+            // Migração de nickname → username (versões antigas)
             if (u.username === undefined) {
                 u.username = (u.nickname !== undefined) ? u.nickname : null;
                 hasMigration = true;
@@ -49,9 +62,39 @@ export default class UserModel {
                 u.banned = false;
                 hasMigration = true;
             }
+
+            // Novos campos (migração para versão atual)
+            if (u.role === undefined) {
+                u.role = 'user';
+                hasMigration = true;
+            }
+
+            if (!Array.isArray(u.favorites)) {
+                u.favorites = [];
+                hasMigration = true;
+            }
+
+            if (!Array.isArray(u.completedExercises)) {
+                u.completedExercises = [];
+                hasMigration = true;
+            }
+
+            if (!Array.isArray(u.badges)) {
+                u.badges = [];
+                hasMigration = true;
+            }
+
+            if (u.quizzesCompleted === undefined) {
+                u.quizzesCompleted = 0;
+                hasMigration = true;
+            }
+
+            if (u.lastLogin === undefined) {
+                u.lastLogin = null;
+                hasMigration = true;
+            }
         });
 
-        // Guardar uma vez a migração para não repetir sempre que a app abre.
         if (hasMigration) {
             this.saveUsers(users);
         }
@@ -59,13 +102,29 @@ export default class UserModel {
         return users;
     }
 
+    // ── Guardar lista de utilizadores ──
     saveUsers(users) {
         localStorage.setItem('respira_users', JSON.stringify(users));
     }
 
+    // ── Guardar as alterações do user atual no array global ──
+    _syncCurrentUser() {
+        if (!this.#user) return;
+        const users = this.getUsers();
+        const index = users.findIndex(u => u.email === this.#user.email);
+        if (index !== -1) {
+            users[index] = { ...this.#user };
+            this.saveUsers(users);
+        }
+    }
+
+    // ═══════════════════════════════════════
+    //  REGISTO / LOGIN / LOGOUT
+    // ═══════════════════════════════════════
+
     register(userData) {
         const users = this.getUsers();
-        
+
         if (users.some(u => u.email === userData.email)) {
             return false; // Email já existe
         }
@@ -78,10 +137,16 @@ export default class UserModel {
             birthDate: userData.birthDate,
             gender: userData.gender,
             username: null,
+            role: 'user',
             breezePoints: 0,
             ventinhos: 0,
             exerciseStreak: 0,
-            banned: false
+            banned: false,
+            favorites: [],
+            completedExercises: [],
+            badges: [],
+            quizzesCompleted: 0,
+            lastLogin: new Date().toISOString()
         };
 
         users.push(newUser);
@@ -101,7 +166,10 @@ export default class UserModel {
                 return { success: false, banned: true };
             }
 
+            // Atualizar lastLogin
+            foundUser.lastLogin = new Date().toISOString();
             this.#user = foundUser;
+            this._syncCurrentUser();
             localStorage.setItem('respira_current_user', email);
             return { success: true, banned: false };
         }
@@ -109,43 +177,39 @@ export default class UserModel {
         return { success: false, banned: false };
     }
 
-    setUsername(username) {
-        if (this.#user) {
-            this.#user.username = username;
-            
-            const users = this.getUsers();
-            const index = users.findIndex(u => u.email === this.#user.email);
-            if (index !== -1) {
-                users[index].username = username;
-                this.saveUsers(users);
-            }
-        }
-    }
-
-    // Mantido por compatibilidade com versões antigas do Controller.
-    setNickname(nickname) {
-        this.setUsername(nickname);
-    }
-
     logout() {
         this.#user = null;
         localStorage.removeItem('respira_current_user');
     }
 
-    addPoints(pts) {
+    // ═══════════════════════════════════════
+    //  USERNAME
+    // ═══════════════════════════════════════
+
+    setUsername(username) {
         if (this.#user) {
-            this.#user.breezePoints += pts;
-            
-            const users = this.getUsers();
-            const index = users.findIndex(u => u.email === this.#user.email);
-            if (index !== -1) {
-                users[index].breezePoints = this.#user.breezePoints;
-                this.saveUsers(users);
-            }
+            this.#user.username = username;
+            this._syncCurrentUser();
         }
     }
 
-    completeExercise(points) {
+    // Mantido por compatibilidade com versões antigas
+    setNickname(nickname) {
+        this.setUsername(nickname);
+    }
+
+    // ═══════════════════════════════════════
+    //  GAMIFICAÇÃO (Pontos, Ventinhos, Streak)
+    // ═══════════════════════════════════════
+
+    addPoints(pts) {
+        if (this.#user) {
+            this.#user.breezePoints += pts;
+            this._syncCurrentUser();
+        }
+    }
+
+    completeExercise(points, scenarioId) {
         if (!this.#user) {
             return {
                 pointsGained: 0,
@@ -158,25 +222,31 @@ export default class UserModel {
         const pointsGained = Number.isFinite(points) ? Math.max(0, Math.round(points)) : 0;
         this.#user.breezePoints += pointsGained;
 
-        let ventinhoGained = false;
-        const nextStreak = (this.#user.exerciseStreak || 0) + 1;
+        // Registar no histórico
+        if (scenarioId !== undefined) {
+            this.#user.completedExercises.push({
+                scenarioId: scenarioId,
+                date: new Date().toISOString(),
+                pointsGained: pointsGained
+            });
+        }
 
-        if (nextStreak >= 3) {
-            this.#user.exerciseStreak = 0;
-            this.#user.ventinhos = (this.#user.ventinhos || 0) + 1;
+        // Lógica do streak e ventinhos (Estilo TikTok)
+        let ventinhoGained = false;
+        this.#user.exerciseStreak = (this.#user.exerciseStreak || 0) + 1;
+
+        if (this.#user.exerciseStreak >= 3) {
+            // A sequência ativa aos 3 e os ventinhos refletem a sequência
+            this.#user.ventinhos = this.#user.exerciseStreak;
             ventinhoGained = true;
         } else {
-            this.#user.exerciseStreak = nextStreak;
+            // Se a sequência for menor que 3, os ventinhos ainda não estão ativos
+            if (!this.#user.ventinhos || this.#user.ventinhos < 3) {
+                this.#user.ventinhos = 0;
+            }
         }
 
-        const users = this.getUsers();
-        const index = users.findIndex(u => u.email === this.#user.email);
-        if (index !== -1) {
-            users[index].breezePoints = this.#user.breezePoints;
-            users[index].exerciseStreak = this.#user.exerciseStreak;
-            users[index].ventinhos = this.#user.ventinhos;
-            this.saveUsers(users);
-        }
+        this._syncCurrentUser();
 
         return {
             pointsGained,
@@ -185,6 +255,97 @@ export default class UserModel {
             ventinhos: this.#user.ventinhos
         };
     }
+
+    // ═══════════════════════════════════════
+    //  FAVORITOS
+    // ═══════════════════════════════════════
+
+    toggleFavorite(scenarioId) {
+        if (!this.#user) return false;
+
+        const index = this.#user.favorites.indexOf(scenarioId);
+        if (index !== -1) {
+            // Remover dos favoritos
+            this.#user.favorites.splice(index, 1);
+        } else {
+            // Adicionar aos favoritos
+            this.#user.favorites.push(scenarioId);
+        }
+
+        this._syncCurrentUser();
+        return this.#user.favorites.includes(scenarioId);
+    }
+
+    isFavorite(scenarioId) {
+        if (!this.#user) return false;
+        return this.#user.favorites.includes(scenarioId);
+    }
+
+    get favorites() {
+        return this.#user ? [...this.#user.favorites] : [];
+    }
+
+    // ═══════════════════════════════════════
+    //  HISTÓRICO DE EXERCÍCIOS
+    // ═══════════════════════════════════════
+
+    get completedExercises() {
+        return this.#user ? [...this.#user.completedExercises] : [];
+    }
+
+    get totalExercisesCompleted() {
+        return this.#user ? this.#user.completedExercises.length : 0;
+    }
+
+    // ═══════════════════════════════════════
+    //  BADGES (CONQUISTAS)
+    // ═══════════════════════════════════════
+
+    earnBadge(badgeId) {
+        if (!this.#user) return;
+        if (!this.#user.badges.includes(badgeId)) {
+            this.#user.badges.push(badgeId);
+            this._syncCurrentUser();
+        }
+    }
+
+    get badges() {
+        return this.#user ? [...this.#user.badges] : [];
+    }
+
+    // ═══════════════════════════════════════
+    //  QUIZ
+    // ═══════════════════════════════════════
+
+    incrementQuizzesCompleted() {
+        if (!this.#user) return;
+        this.#user.quizzesCompleted = (this.#user.quizzesCompleted || 0) + 1;
+        this._syncCurrentUser();
+    }
+
+    get quizzesCompleted() {
+        return this.#user ? (this.#user.quizzesCompleted || 0) : 0;
+    }
+
+    // ═══════════════════════════════════════
+    //  DADOS DO USER (para o BadgeModel)
+    // ═══════════════════════════════════════
+
+    getUserData() {
+        if (!this.#user) return null;
+        return {
+            completedExercises: this.#user.completedExercises,
+            favorites: this.#user.favorites,
+            ventinhos: this.#user.ventinhos,
+            breezePoints: this.#user.breezePoints,
+            badges: this.#user.badges,
+            quizzesCompleted: this.#user.quizzesCompleted || 0
+        };
+    }
+
+    // ═══════════════════════════════════════
+    //  ADMIN — Gestão de utilizadores
+    // ═══════════════════════════════════════
 
     listUsers() {
         return this.getUsers();
@@ -205,9 +366,50 @@ export default class UserModel {
         return true;
     }
 
+
+
+    // ═══════════════════════════════════════
+    //  RECOMENDAÇÃO — dados para o sistema
+    // ═══════════════════════════════════════
+
+    /**
+     * Retorna os IDs de cenários que o user já completou.
+     */
+    getCompletedScenarioIds() {
+        if (!this.#user) return [];
+        return this.#user.completedExercises.map(ex => ex.scenarioId);
+    }
+
+    /**
+     * Retorna os tipos de cenários mais praticados.
+     */
+    getMostPracticedTypes(scenarios) {
+        if (!this.#user) return [];
+        const completedIds = this.getCompletedScenarioIds();
+        const typeCounts = {};
+
+        completedIds.forEach(id => {
+            const scenario = scenarios.find(s => s.id === id);
+            if (scenario) {
+                typeCounts[scenario.type] = (typeCounts[scenario.type] || 0) + 1;
+            }
+        });
+
+        // Ordenar por count (mais praticados primeiro)
+        const entries = [];
+        for (const type in typeCounts) {
+            entries.push({ type: type, count: typeCounts[type] });
+        }
+        entries.sort((a, b) => b.count - a.count);
+        return entries.map(e => e.type);
+    }
+
+    // ═══════════════════════════════════════
+    //  GETTERS (propriedades de leitura)
+    // ═══════════════════════════════════════
+
     get name() {
         if (!this.#user) return null;
-        // Preferimos `username`, mas aceitamos `nickname` (dados antigos).
         const display = this.#user.username || this.#user.nickname;
         if (display && display.trim() !== "") {
             return display.trim();
@@ -236,8 +438,14 @@ export default class UserModel {
         return this.#user ? this.#user.email : null;
     }
 
+    // Admin é agora determinado pelo role do user (não por flag global)
+    get isAdmin() {
+        return this.#user ? this.#user.role === 'admin' : false;
+    }
+
+    // Mantido para compatibilidade — agora usa o role
     get isAdminEnabled() {
-        return JSON.parse(localStorage.getItem('respira_admin_enabled')) === true;
+        return this.isAdmin;
     }
 
     get isBanned() {
@@ -246,5 +454,9 @@ export default class UserModel {
 
     get isLogged() {
         return this.#user !== null;
+    }
+
+    get lastLogin() {
+        return this.#user ? this.#user.lastLogin : null;
     }
 }

@@ -37,8 +37,8 @@ export default class ScenarioView extends BaseView {
     renderFeedback(feedbackMsg, pointsGained, ventinhoGained, streakCount, ventinhos, continueCallback) {
         let titleBlock = pointsGained > 0 ? "Excelente Trabalho!" : "Continua a Tentar";
         let pointsBlock = pointsGained > 0 ? `<p class="points-gain">+${pointsGained} Pontos de Brisa!</p>` : '';
-        let ventinhoBlock = ventinhoGained ? `<p class="streak-award">+1 Ventinho! 💨</p>` : '';
-        let streakBlock = `<p class="streak-info">Sequência: ${streakCount}/3</p>`;
+        let ventinhoBlock = ventinhoGained ? `<p class="streak-award">🔥 Sequência Ativa! (+1 💨)</p>` : '';
+        let streakBlock = ventinhos < 3 ? `<p class="streak-info">Sequência: ${streakCount}/3</p>` : '';
         let ventinhosBlock = `<p class="streak-total">Total de Ventinhos: 💨 ${ventinhos}</p>`;
 
         this.appElement.innerHTML = `

@@ -1,5 +1,10 @@
 import BaseView from './BaseView.js';
 
+/**
+ * DashboardView — Vista principal após autenticação.
+ * Inclui: topbar, avatar, stats, catálogo, respiração,
+ * favoritos, recomendações, badges, perfil e admin.
+ */
 export default class DashboardView extends BaseView {
     constructor() {
         super();
@@ -14,31 +19,20 @@ export default class DashboardView extends BaseView {
         clearTimeout(this.breathTimeout3);
     }
 
-    getAvatarInfo(points) {
-        if (points >= 300) {
-            return {
-                src: "./assets/avatar-happy.png",
-                label: "Avatar alegre"
-            };
+    getAvatarInfo(exerciseCount) {
+        if (exerciseCount >= 5) {
+            return { src: "./img/Good.png", label: "Avatar" };
         }
-
-        if (points >= 100) {
-            return {
-                src: "./assets/avatar-neutral.png",
-                label: "Avatar neutro"
-            };
-        }
-
-        return {
-            src: "./assets/avatar-sad.png",
-            label: "Avatar triste"
-        };
+        return { src: "./img/Sab.png", label: "Avatar" };
     }
 
-    renderDashboard(userName, points, ventinhos, streakCount, isAdmin, catalogCallback, breathingCallback, logoutCallback, profileCallback, adminCallback) {
-        this.clearTimeouts();
+    // ═══════════════════════════════════════
+    //  DASHBOARD PRINCIPAL
+    // ═══════════════════════════════════════
 
-        const avatar = this.getAvatarInfo(points);
+    renderDashboard(userName, points, ventinhos, streakCount, isAdmin, exerciseCount, callbacks) {
+        this.clearTimeouts();
+        const avatar = this.getAvatarInfo(exerciseCount);
 
         const adminButton = isAdmin
             ? '<button id="btnAdmin" class="btn-admin">Admin</button>'
@@ -64,10 +58,11 @@ export default class DashboardView extends BaseView {
                     <p>Os teus Pontos de Brisa</p>
                     <h2>🌬️ ${points}</h2>
                     <p class="stats-line">Ventinhos: 💨 ${ventinhos}</p>
-                    <p class="stats-line">Sequência: ${streakCount}/3</p>
+                    ${ventinhos < 3 ? `<p class="stats-line">Sequência: ${streakCount}/3</p>` : ''}
                 </div>
                 <div class="options">
                     <button id="btnCatalog">Catálogo de Desafios</button>
+                    <button id="btnQuiz">Quiz: Ansiedade Social</button>
                     <button id="btnBreathe">Exercício de Respiração</button>
                     <button id="btnLogout" class="btn-secondary">Sair da Viagem</button>
                 </div>
@@ -79,41 +74,56 @@ export default class DashboardView extends BaseView {
             </div>
         `;
 
-        document.getElementById('btnCatalog').addEventListener('click', catalogCallback);
-        document.getElementById('btnBreathe').addEventListener('click', breathingCallback);
-        document.getElementById('btnLogout').addEventListener('click', logoutCallback);
+        // Ligar eventos
+        document.getElementById('btnCatalog').addEventListener('click', callbacks.catalog);
+        document.getElementById('btnBreathe').addEventListener('click', callbacks.breathing);
+        document.getElementById('btnLogout').addEventListener('click', callbacks.logout);
+        document.getElementById('btnQuiz').addEventListener('click', callbacks.quiz);
 
         const profileBtn = document.getElementById('btnProfile');
-        if (profileBtn && profileCallback) {
-            profileBtn.addEventListener('click', profileCallback);
-        }
+        if (profileBtn) profileBtn.addEventListener('click', callbacks.profile);
 
         const adminBtn = document.getElementById('btnAdmin');
-        if (adminBtn && adminCallback) {
-            adminBtn.addEventListener('click', adminCallback);
-        }
+        if (adminBtn) adminBtn.addEventListener('click', callbacks.admin);
 
         const bubbleInfo = document.getElementById('bubbleInfo');
         if (bubbleInfo) {
-            bubbleInfo.addEventListener('click', (event) => {
-                event.preventDefault();
+            bubbleInfo.addEventListener('click', (e) => {
+                e.preventDefault();
                 this.renderInfoModal();
             });
         }
 
         const bubbleResources = document.getElementById('bubbleResources');
         if (bubbleResources) {
-            bubbleResources.addEventListener('click', (event) => {
-                event.preventDefault();
+            bubbleResources.addEventListener('click', (e) => {
+                e.preventDefault();
                 this.renderResourcesModal();
             });
         }
     }
 
-    renderProfileModal(userName, points, ventinhos, streakCount, quote, adminCallback) {
+
+
+    // ═══════════════════════════════════════
+    //  PERFIL (modal expandido com favoritos, badges, histórico)
+    // ═══════════════════════════════════════
+
+    renderProfileModal(userName, points, ventinhos, streakCount, quote, badges, badgeDefs, historyCount, favCount) {
         this.closeModal();
 
-        const avatar = this.getAvatarInfo(points);
+        // Gerar iniciais do nome para a foto de perfil
+        const initials = userName.split(' ').map(n => n.charAt(0).toUpperCase()).slice(0, 2).join('');
+
+        // Badges conquistados
+        let badgesHtml = '<p class="admin-empty">Ainda sem conquistas.</p>';
+        if (badges.length > 0) {
+            badgesHtml = badges.map(bId => {
+                const def = badgeDefs.find(d => d.id === bId);
+                if (!def) return '';
+                return `<span class="badge-item" title="${def.description}">${def.icon} ${def.name}</span>`;
+            }).join('');
+        }
 
         const overlay = document.createElement('div');
         overlay.id = 'respira-modal-overlay';
@@ -125,8 +135,8 @@ export default class DashboardView extends BaseView {
                 <h3 class="modal-title">Perfil</h3>
 
                 <div class="profile-avatar">
-                    <img src="${avatar.src}" alt="${avatar.label}" class="profile-avatar-img" />
-                    <p class="avatar-label">${avatar.label}</p>
+                    <div class="profile-initials">${initials}</div>
+                    <p class="avatar-label">${userName}</p>
                 </div>
 
                 <div class="profile-grid">
@@ -142,45 +152,141 @@ export default class DashboardView extends BaseView {
                         <span>Ventinhos</span>
                         <strong>💨 ${ventinhos}</strong>
                     </div>
-                    <div class="profile-row">
+                    ${ventinhos < 3 ? `<div class="profile-row">
                         <span>Sequência</span>
                         <strong>${streakCount}/3</strong>
+                    </div>` : ''}
+                    <div class="profile-row">
+                        <span>Exercícios feitos</span>
+                        <strong>${historyCount}</strong>
+                    </div>
+                    <div class="profile-row">
+                        <span>Favoritos</span>
+                        <strong>❤️ ${favCount}</strong>
+                    </div>
+                </div>
+
+                <div class="profile-badges">
+                    <h4>🏅 Conquistas</h4>
+                    <div class="badges-grid">
+                        ${badgesHtml}
                     </div>
                 </div>
 
                 <p class="quote">"${quote}"</p>
-
-                <button type="button" id="btnAdminSecret" class="admin-secret" title="Preparar modo admin">Admin</button>
-                <p id="admin-flag-msg" class="admin-flag-msg"></p>
             </div>
         `;
 
         document.body.appendChild(overlay);
 
-        const closeBtn = document.getElementById('profile-modal-close');
-        closeBtn.addEventListener('click', (event) => {
-            event.preventDefault();
+        document.getElementById('profile-modal-close').addEventListener('click', (e) => {
+            e.preventDefault();
             this.closeModal();
         });
 
-        overlay.addEventListener('click', (event) => {
-            if (event.target === overlay) {
-                this.closeModal();
-            }
-        });
-
-        const adminBtn = document.getElementById('btnAdminSecret');
-        const adminMsg = document.getElementById('admin-flag-msg');
-
-        adminBtn.addEventListener('click', (event) => {
-            event.preventDefault();
-            if (adminCallback) adminCallback();
-            if (adminMsg) adminMsg.textContent = "Modo admin preparado.";
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) this.closeModal();
         });
     }
 
-    renderAdminPanel(scenarios, users, currentEmail, addCallback, removeCallback, toggleBanCallback) {
+    // ═══════════════════════════════════════
+    //  CATÁLOGO (com favoritos e recomendações)
+    // ═══════════════════════════════════════
+
+    renderCatalog(scenarios, recommendations, favoriteIds, playCallback, toggleFavCallback, backCallback) {
+        this.clearTimeouts();
+
+        // Secção de recomendações
+        let recsHtml = '';
+        if (recommendations.length > 0) {
+            const recButtons = recommendations.map(sc => {
+                const isFav = favoriteIds.includes(sc.id);
+                const favIcon = isFav ? '❤️' : '🤍';
+                return `
+                    <div class="catalog-card recommended">
+                        <button class="fav-toggle" data-id="${sc.id}" title="Favorito">${favIcon}</button>
+                        <button class="option-btn catalog-btn" data-id="${sc.id}">${sc.title}</button>
+                        <span class="catalog-tag">${this.getTypeLabel(sc.type)}</span>
+                    </div>
+                `;
+            }).join('');
+
+            recsHtml = `
+                <div class="catalog-section">
+                    <h3>⭐ Recomendados para ti</h3>
+                    <div class="catalog-grid">${recButtons}</div>
+                </div>
+                <hr class="catalog-divider" />
+            `;
+        }
+
+        // Lista completa de cenários
+        const allButtons = scenarios.map(sc => {
+            const isFav = favoriteIds.includes(sc.id);
+            const favIcon = isFav ? '❤️' : '🤍';
+            return `
+                <div class="catalog-card">
+                    <button class="fav-toggle" data-id="${sc.id}" title="Favorito">${favIcon}</button>
+                    <button class="option-btn catalog-btn" data-id="${sc.id}">${sc.title}</button>
+                    <span class="catalog-tag">${this.getTypeLabel(sc.type)}</span>
+                </div>
+            `;
+        }).join('');
+
+        this.appElement.innerHTML = `
+            <div class="screen catalog">
+                <h2>Catálogo de Desafios</h2>
+                <p>Escolhe a situação com a qual te queres expor hoje:</p>
+                ${recsHtml}
+                <div class="catalog-section">
+                    <h3>📋 Todos os desafios</h3>
+                    <div class="catalog-grid">${allButtons}</div>
+                </div>
+            </div>
+        `;
+
+        // Eventos de play
+        document.querySelectorAll('.catalog-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const id = parseInt(e.target.getAttribute('data-id'));
+                const scenario = scenarios.find(s => s.id === id);
+                if (scenario) playCallback(scenario);
+            });
+        });
+
+        // Eventos de favorito
+        document.querySelectorAll('.fav-toggle').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const id = parseInt(e.currentTarget.getAttribute('data-id'));
+                if (toggleFavCallback) toggleFavCallback(id);
+            });
+        });
+
+        this.renderBackButton(backCallback);
+    }
+
+    getTypeLabel(type) {
+        if (type === 'vida-real') return 'Vida real';
+        if (type === 'soft-skills') return 'Soft skills';
+        return 'Social';
+    }
+
+    // ═══════════════════════════════════════
+    //  PAINEL ADMIN
+    // ═══════════════════════════════════════
+
+    renderAdminPanel(scenarios, users, currentEmail, callbacks) {
         this.closeModal();
+
+        // Estatísticas globais
+        const totalUsers = users.filter(u => u.role !== 'admin').length;
+        let totalCompleted = 0;
+        users.forEach(u => {
+            if (Array.isArray(u.completedExercises)) {
+                totalCompleted += u.completedExercises.length;
+            }
+        });
 
         const typeLabel = (value) => {
             if (value === 'vida-real') return 'Vida real';
@@ -207,12 +313,14 @@ export default class DashboardView extends BaseView {
             const actionLabel = user.banned ? 'Desbanir' : 'Banir';
             const disabledAttr = isCurrent ? 'disabled' : '';
             const infoSuffix = isCurrent ? ' (tu)' : '';
+            const roleTag = user.role === 'admin' ? ' 👑' : '';
+            const exercisesCount = Array.isArray(user.completedExercises) ? user.completedExercises.length : 0;
 
             return `
                 <div class="admin-row">
                     <div class="admin-row-info">
-                        <strong>${user.firstName} ${user.lastName}${infoSuffix}</strong>
-                        <span class="admin-tag">${statusLabel}</span>
+                        <strong>${user.firstName} ${user.lastName}${infoSuffix}${roleTag}</strong>
+                        <span class="admin-tag">${statusLabel} · ${exercisesCount} exercícios</span>
                     </div>
                     <button class="admin-ban" data-email="${user.email}" data-next="${user.banned ? 'false' : 'true'}" ${disabledAttr}>
                         ${actionLabel}
@@ -228,7 +336,17 @@ export default class DashboardView extends BaseView {
         overlay.innerHTML = `
             <div class="modal admin-modal" role="dialog" aria-modal="true">
                 <button type="button" class="modal-close" id="admin-modal-close">&#10005;</button>
-                <h3 class="modal-title">Painel Admin</h3>
+                <h3 class="modal-title">👑 Painel Admin</h3>
+
+                <div class="admin-section">
+                    <h4>📊 Estatísticas</h4>
+                    <div class="admin-stats-grid">
+                        <div class="admin-stat"><strong>${totalUsers}</strong><span>Utilizadores</span></div>
+                        <div class="admin-stat"><strong>${scenarios.length}</strong><span>Exercícios</span></div>
+                        <div class="admin-stat"><strong>${totalCompleted}</strong><span>Completados</span></div>
+                    </div>
+                </div>
+
 
                 <div class="admin-section">
                     <h4>Adicionar exercício</h4>
@@ -265,52 +383,53 @@ export default class DashboardView extends BaseView {
 
         document.body.appendChild(overlay);
 
-        const closeBtn = document.getElementById('admin-modal-close');
-        closeBtn.addEventListener('click', (event) => {
-            event.preventDefault();
+        // Fechar
+        document.getElementById('admin-modal-close').addEventListener('click', (e) => {
+            e.preventDefault();
             this.closeModal();
         });
-
-        overlay.addEventListener('click', (event) => {
-            if (event.target === overlay) {
-                this.closeModal();
-            }
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) this.closeModal();
         });
 
-        const form = document.getElementById('admin-add-form');
-        form.addEventListener('submit', (event) => {
-            event.preventDefault();
+        // Adicionar exercício
+        document.getElementById('admin-add-form').addEventListener('submit', (e) => {
+            e.preventDefault();
             const title = document.getElementById('admin-title').value.trim();
             const text = document.getElementById('admin-text').value.trim();
             const points = Number(document.getElementById('admin-points').value);
             const type = document.getElementById('admin-type').value;
-
-            if (addCallback) {
-                addCallback({ title, text, points, type });
-            }
+            if (callbacks.addExercise) callbacks.addExercise({ title, text, points, type });
         });
 
+
+
+        // Remover exercícios
         overlay.querySelectorAll('.admin-remove').forEach((btn) => {
-            btn.addEventListener('click', (event) => {
-                event.preventDefault();
-                const id = Number(event.currentTarget.getAttribute('data-id'));
-                if (removeCallback) removeCallback(id);
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const id = Number(e.currentTarget.getAttribute('data-id'));
+                if (callbacks.removeExercise) callbacks.removeExercise(id);
             });
         });
 
+        // Ban/Unban utilizadores
         overlay.querySelectorAll('.admin-ban').forEach((btn) => {
-            btn.addEventListener('click', (event) => {
-                event.preventDefault();
-                const email = event.currentTarget.getAttribute('data-email');
-                const shouldBan = event.currentTarget.getAttribute('data-next') === 'true';
-                if (toggleBanCallback) toggleBanCallback(email, shouldBan);
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                const email = e.currentTarget.getAttribute('data-email');
+                const shouldBan = e.currentTarget.getAttribute('data-next') === 'true';
+                if (callbacks.toggleBan) callbacks.toggleBan(email, shouldBan);
             });
         });
     }
 
+    // ═══════════════════════════════════════
+    //  MODAIS INFORMATIVOS
+    // ═══════════════════════════════════════
+
     renderInfoModal() {
         this.closeModal();
-
         const overlay = document.createElement('div');
         overlay.id = 'respira-modal-overlay';
         overlay.className = 'modal-overlay';
@@ -325,23 +444,17 @@ export default class DashboardView extends BaseView {
         `;
 
         document.body.appendChild(overlay);
-
-        const closeBtn = document.getElementById('info-modal-close');
-        closeBtn.addEventListener('click', (event) => {
-            event.preventDefault();
+        document.getElementById('info-modal-close').addEventListener('click', (e) => {
+            e.preventDefault();
             this.closeModal();
         });
-
-        overlay.addEventListener('click', (event) => {
-            if (event.target === overlay) {
-                this.closeModal();
-            }
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) this.closeModal();
         });
     }
 
     renderResourcesModal() {
         this.closeModal();
-
         const overlay = document.createElement('div');
         overlay.id = 'respira-modal-overlay';
         overlay.className = 'modal-overlay';
@@ -368,47 +481,18 @@ export default class DashboardView extends BaseView {
         `;
 
         document.body.appendChild(overlay);
-
-        const closeBtn = document.getElementById('resources-modal-close');
-        closeBtn.addEventListener('click', (event) => {
-            event.preventDefault();
+        document.getElementById('resources-modal-close').addEventListener('click', (e) => {
+            e.preventDefault();
             this.closeModal();
         });
-
-        overlay.addEventListener('click', (event) => {
-            if (event.target === overlay) {
-                this.closeModal();
-            }
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) this.closeModal();
         });
     }
 
-    renderCatalog(scenarios, playScenarioCallback, backCallback) {
-        this.clearTimeouts();
-        
-        let buttonsHtml = scenarios.map(sc => 
-            `<button class="option-btn" data-id="${sc.id}">${sc.title}</button>`
-        ).join('');
-
-        this.appElement.innerHTML = `
-            <div class="screen catalog">
-                <h2>Catálogo de Cenários</h2>
-                <p>Escolhe a situação com a qual te queres expor hoje:</p>
-                <div class="options catalog-list">
-                    ${buttonsHtml}
-                </div>
-            </div>
-        `;
-
-        document.querySelectorAll('.catalog-list .option-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const id = parseInt(e.target.getAttribute('data-id'));
-                const scenario = scenarios.find(s => s.id === id);
-                playScenarioCallback(scenario);
-            });
-        });
-
-        this.renderBackButton(backCallback);
-    }
+    // ═══════════════════════════════════════
+    //  EXERCÍCIO DE RESPIRAÇÃO
+    // ═══════════════════════════════════════
 
     renderBreathing(backCallback) {
         this.clearTimeouts();
@@ -435,7 +519,7 @@ export default class DashboardView extends BaseView {
     startBreathingCycle() {
         const circle = document.getElementById('breatheCircle');
         const text = document.getElementById('breatheText');
-        
+
         if (!circle || !text) return;
 
         const cycle = () => {
@@ -448,14 +532,14 @@ export default class DashboardView extends BaseView {
 
             this.breathTimeout1 = setTimeout(() => {
                 if (!document.getElementById('breatheCircle')) return;
-                
+
                 text.innerText = "Sustém (7s)";
                 circle.style.backgroundColor = "var(--color-10)";
                 circle.style.color = "var(--color-black)";
-                
+
                 this.breathTimeout2 = setTimeout(() => {
                     if (!document.getElementById('breatheCircle')) return;
-                    
+
                     text.innerText = "Expira (8s)";
                     circle.style.transition = "transform 8s linear, background-color 8s";
                     circle.style.transform = "scale(1)";

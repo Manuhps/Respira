@@ -1,14 +1,26 @@
 import { getRandomQuote } from '../utils/quotes.js';
-
+/**
+ * AppController — Controlador principal da aplicação Respira.
+ * Liga Models ↔ Views e gere toda a lógica de navegação, eventos e dados.
+ */
 export default class AppController {
-    constructor(userModel, scenarioModel, landingView, authView, dashboardView, scenarioView) {
+    constructor(userModel, scenarioModel, quizModel, badgeModel, landingView, authView, dashboardView, scenarioView, quizView) {
         this.userModel = userModel;
         this.scenarioModel = scenarioModel;
+        this.quizModel = quizModel;
+        this.badgeModel = badgeModel;
         this.landingView = landingView;
         this.authView = authView;
         this.dashboardView = dashboardView;
         this.scenarioView = scenarioView;
-        
+        this.quizView = quizView;
+
+        // Estado do quiz em curso
+        this._quizQuestions = [];
+        this._quizIndex = 0;
+        this._quizScore = 0;
+        this._quizCorrect = 0;
+
         this.history = [];
         this.init();
     }
@@ -20,6 +32,10 @@ export default class AppController {
             this.goToLanding();
         }
     }
+
+    // ═══════════════════════════════════════
+    //  NAVEGAÇÃO
+    // ═══════════════════════════════════════
 
     goToLanding() {
         this.history = [];
@@ -45,9 +61,23 @@ export default class AppController {
         );
     }
 
+    handleBack() {
+        const prevState = this.history.pop();
+        if (prevState) {
+            prevState();
+        } else {
+            this.goToLanding();
+        }
+    }
+
+    // ═══════════════════════════════════════
+    //  AUTENTICAÇÃO
+    // ═══════════════════════════════════════
+
     handleLogin(email, password) {
         const result = this.userModel.login(email, password);
         if (result.success) {
+            this._generateAutoNotifications();
             this.askForUsernameAndGoToDashboard();
         } else if (result.banned) {
             this.authView.showMessageModal(
@@ -55,7 +85,6 @@ export default class AppController {
                 "Esta conta está temporariamente suspensa. Se precisares de ajuda, fala com a administração."
             );
         } else {
-            // Modal (pop-up) em vez de alert para uma UX mais profissional.
             this.authView.showMessageModal(
                 "Não foi possível entrar",
                 "Credenciais incorretas ou utilizador não encontrado."
@@ -68,7 +97,6 @@ export default class AppController {
         if (success) {
             this.askForUsernameAndGoToDashboard();
         } else {
-            // Modal (pop-up) em vez de alert.
             this.authView.showMessageModal(
                 "Conta já existente",
                 "Este email já está registado. Por favor, faz login."
@@ -77,9 +105,6 @@ export default class AppController {
     }
 
     askForUsernameAndGoToDashboard() {
-        // Em vez de prompt()/alert(), mostramos uma modal custom dentro da app.
-
-        // Se o utilizador já tiver username definido, não voltamos a perguntar.
         if (this.userModel.username && this.userModel.username.trim() !== "") {
             this.goToDashboard();
             return;
@@ -91,15 +116,10 @@ export default class AppController {
             "O teu username (opcional)",
             (value) => {
                 const username = value ? value.trim() : "";
-                if (username !== "") {
-                    this.userModel.setUsername(username);
-                } else {
-                    this.userModel.setUsername(null);
-                }
+                this.userModel.setUsername(username !== "" ? username : null);
                 this.goToDashboard();
             },
             () => {
-                // Cancelar = continuar com nome real.
                 this.userModel.setUsername(null);
                 this.goToDashboard();
             }
@@ -111,33 +131,38 @@ export default class AppController {
         this.goToLanding();
     }
 
-    handleBack() {
-        const prevState = this.history.pop();
-        if (prevState) {
-            prevState();
-        } else {
-            this.goToLanding();
-        }
-    }
+    // ═══════════════════════════════════════
+    //  DASHBOARD
+    // ═══════════════════════════════════════
 
     goToDashboard() {
-        this.history = []; 
+        this.history = [];
         this.dashboardView.renderDashboard(
-            this.userModel.name, // Retorna o username (se existir) ou o nome real
+            this.userModel.name,
             this.userModel.points,
             this.userModel.ventinhos,
             this.userModel.streakCount,
-            this.userModel.isAdminEnabled,
-            this.goToCatalog.bind(this),
-            this.goToBreathing.bind(this),
-            this.handleLogout.bind(this),
-            this.handleProfile.bind(this),
-            this.openAdminPanel.bind(this)
+            this.userModel.isAdmin,
+            this.userModel.totalExercisesCompleted,
+            {
+                catalog: this.goToCatalog.bind(this),
+                breathing: this.goToBreathing.bind(this),
+                logout: this.handleLogout.bind(this),
+                profile: this.handleProfile.bind(this),
+                admin: this.openAdminPanel.bind(this),
+                quiz: this.goToQuiz.bind(this)
+            }
         );
     }
 
+    // ═══════════════════════════════════════
+    //  PERFIL
+    // ═══════════════════════════════════════
+
     handleProfile() {
         const quote = getRandomQuote();
+        const badges = this.userModel.badges;
+        const badgeDefs = this.badgeModel.getAllBadges();
 
         this.dashboardView.renderProfileModal(
             this.userModel.name,
@@ -145,19 +170,188 @@ export default class AppController {
             this.userModel.ventinhos,
             this.userModel.streakCount,
             quote,
-            this.handleAdminFlag.bind(this)
+            badges,
+            badgeDefs,
+            this.userModel.totalExercisesCompleted,
+            this.userModel.favorites.length
         );
     }
 
-    handleAdminFlag() {
-        localStorage.setItem('respira_admin_enabled', JSON.stringify(true));
+    // ═══════════════════════════════════════
+    //  CATÁLOGO (com favoritos e recomendações)
+    // ═══════════════════════════════════════
+
+    goToCatalog() {
+        this.history.push(this.goToDashboard.bind(this));
+        const scenarios = this.scenarioModel.getAllScenarios();
+        const favoriteIds = this.userModel.favorites;
+        const completedIds = this.userModel.getCompletedScenarioIds();
+        const mostPracticed = this.userModel.getMostPracticedTypes(scenarios);
+        const recommendations = this.scenarioModel.getRecommendations(completedIds, favoriteIds, mostPracticed);
+
+        this.dashboardView.renderCatalog(
+            scenarios,
+            recommendations,
+            favoriteIds,
+            this.handlePlayScenario.bind(this),
+            this.handleToggleFavorite.bind(this),
+            this.handleBack.bind(this)
+        );
     }
 
+    handleToggleFavorite(scenarioId) {
+        this.userModel.toggleFavorite(scenarioId);
+        this._checkAndAwardBadges();
+        // Re-renderizar o catálogo para atualizar os ícones
+        this.history.pop(); // Remover a entrada duplicada
+        this.goToCatalog();
+    }
+
+    // ═══════════════════════════════════════
+    //  CENÁRIOS (Jogar)
+    // ═══════════════════════════════════════
+
+    handlePlayScenario(scenario) {
+        this.history.push(this.goToCatalog.bind(this));
+        this.scenarioView.renderScenario(
+            scenario,
+            (option) => this.handleOptionSelected(scenario, option),
+            this.handleBack.bind(this)
+        );
+    }
+
+    handleOptionSelected(scenario, option) {
+        const result = this.userModel.completeExercise(option.points, scenario.id);
+
+        this._checkAndAwardBadges();
+
+        this.scenarioView.renderFeedback(
+            option.feedback,
+            result.pointsGained,
+            result.ventinhoGained,
+            result.streakCount,
+            result.ventinhos,
+            this.handleBack.bind(this)
+        );
+    }
+
+    // ═══════════════════════════════════════
+    //  RESPIRAÇÃO
+    // ═══════════════════════════════════════
+
+    goToBreathing() {
+        this.history.push(this.goToDashboard.bind(this));
+        this.dashboardView.renderBreathing(this.handleBack.bind(this));
+    }
+
+    // ═══════════════════════════════════════
+    //  QUIZ
+    // ═══════════════════════════════════════
+
+    goToQuiz() {
+        this.history.push(this.goToDashboard.bind(this));
+        const allQuestions = this.quizModel.getAllQuestions();
+
+        if (allQuestions.length === 0) {
+            this.authView.showMessageModal("Quiz", "De momento não existem perguntas no quiz.");
+            return;
+        }
+
+        this.quizView.renderQuizStart(
+            allQuestions.length,
+            this.handleBack.bind(this),
+            () => this.startQuiz()
+        );
+    }
+
+    startQuiz() {
+        this._quizQuestions = this.quizModel.getRandomQuestions(5);
+        this._quizIndex = 0;
+        this._quizScore = 0;
+        this._quizCorrect = 0;
+        this._showNextQuestion();
+    }
+
+    _showNextQuestion() {
+        if (this._quizIndex >= this._quizQuestions.length) {
+            this._finishQuiz();
+            return;
+        }
+
+        const question = this._quizQuestions[this._quizIndex];
+        this.quizView.renderQuestion(
+            question,
+            this._quizIndex,
+            this._quizQuestions.length,
+            (questionId, selectedIndex) => this._handleQuizAnswer(questionId, selectedIndex),
+            this.handleBack.bind(this)
+        );
+    }
+
+    _handleQuizAnswer(questionId, selectedIndex) {
+        const result = this.quizModel.checkAnswer(questionId, selectedIndex);
+
+        if (result.correct) {
+            this._quizCorrect += 1;
+            this._quizScore += result.points;
+            // Somar pontos ao user
+            this.userModel.addPoints(result.points);
+        }
+
+        this.quizView.renderAnswerFeedback(
+            result.correct,
+            result.explanation,
+            result.points,
+            () => {
+                this._quizIndex += 1;
+                this._showNextQuestion();
+            }
+        );
+    }
+
+    _finishQuiz() {
+        this.userModel.incrementQuizzesCompleted();
+        this._checkAndAwardBadges();
+
+        this.quizView.renderQuizResults(
+            this._quizCorrect,
+            this._quizQuestions.length,
+            this._quizScore,
+            () => this.goToDashboard()
+        );
+    }
+
+    // ═══════════════════════════════════════
+    //  BADGES (Verificação automática)
+    // ═══════════════════════════════════════
+
+    _checkAndAwardBadges() {
+        const userData = this.userModel.getUserData();
+        if (!userData) return;
+
+        const newBadges = this.badgeModel.checkNewBadges(userData);
+
+        newBadges.forEach(badgeId => {
+            this.userModel.earnBadge(badgeId);
+
+            // Notificação de conquista
+            const badgeDef = this.badgeModel.getBadgeById(badgeId);
+            if (badgeDef) {
+                const notification = NotificationModel.badgeNotification(badgeDef.name, badgeDef.icon);
+                this.userModel.addNotification(notification);
+            }
+        });
+    }
+
+    // ═══════════════════════════════════════
+    //  ADMIN
+    // ═══════════════════════════════════════
+
     openAdminPanel() {
-        if (!this.userModel.isAdminEnabled) {
+        if (!this.userModel.isAdmin) {
             this.authView.showMessageModal(
                 "Acesso restrito",
-                "Ativa o modo admin no teu perfil para gerir exercícios e utilizadores."
+                "Apenas administradores podem aceder a este painel."
             );
             return;
         }
@@ -166,9 +360,11 @@ export default class AppController {
             this.scenarioModel.getAllScenarios(),
             this.userModel.listUsers(),
             this.userModel.currentEmail,
-            this.handleAddExercise.bind(this),
-            this.handleRemoveExercise.bind(this),
-            this.handleToggleBan.bind(this)
+            {
+                addExercise: this.handleAddExercise.bind(this),
+                removeExercise: this.handleRemoveExercise.bind(this),
+                toggleBan: this.handleToggleBan.bind(this),
+            }
         );
     }
 
@@ -199,48 +395,11 @@ export default class AppController {
             this.goToLanding();
             this.authView.showMessageModal(
                 "Conta suspensa",
-                "A tua conta foi suspensa pelo modo admin."
+                "A tua conta foi suspensa pelo administrador."
             );
             return;
         }
 
         this.openAdminPanel();
-    }
-
-    goToCatalog() {
-        this.history.push(this.goToDashboard.bind(this));
-        const scenarios = this.scenarioModel.getAllScenarios();
-        this.dashboardView.renderCatalog(
-            scenarios, 
-            this.handlePlayScenario.bind(this),
-            this.handleBack.bind(this)
-        );
-    }
-
-    goToBreathing() {
-        this.history.push(this.goToDashboard.bind(this));
-        this.dashboardView.renderBreathing(this.handleBack.bind(this));
-    }
-
-    handlePlayScenario(scenario) {
-        this.history.push(this.goToCatalog.bind(this));
-        this.scenarioView.renderScenario(
-            scenario, 
-            (option) => this.handleOptionSelected(scenario, option),
-            this.handleBack.bind(this)
-        );
-    }
-
-    handleOptionSelected(scenario, option) {
-        const result = this.userModel.completeExercise(option.points);
-
-        this.scenarioView.renderFeedback(
-            option.feedback,
-            result.pointsGained,
-            result.ventinhoGained,
-            result.streakCount,
-            result.ventinhos,
-            this.handleBack.bind(this)
-        );
     }
 }
