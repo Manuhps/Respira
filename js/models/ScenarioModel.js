@@ -1,3 +1,8 @@
+/**
+ * ScenarioModel — Gere os cenários/exercícios da aplicação.
+ * Os dados iniciais são injetados pelo MockServer no localStorage.
+ * Suporta CRUD (admin) e sistema de recomendação.
+ */
 export default class ScenarioModel {
     constructor() {
         this.storageKey = 'respira_scenarios';
@@ -6,11 +11,11 @@ export default class ScenarioModel {
         if (Array.isArray(stored) && stored.length > 0) {
             this.scenarios = this.normalizeScenarios(stored);
         } else {
-            this.scenarios = this.getDefaultScenarios();
-            this.saveScenarios(this.scenarios);
+            this.scenarios = [];
         }
     }
 
+    // ── Normalizar cenários (compatibilidade com dados antigos) ──
     normalizeScenarios(list) {
         let hasChanges = false;
 
@@ -42,10 +47,12 @@ export default class ScenarioModel {
         return normalized;
     }
 
+    // ── Guardar no localStorage ──
     saveScenarios(list) {
         localStorage.setItem(this.storageKey, JSON.stringify(list));
     }
 
+    // ── Criar opção de conclusão simples ──
     createCompletionOption(points) {
         const safePoints = Number.isFinite(points) && points > 0 ? Math.round(points) : 10;
         return {
@@ -55,97 +62,17 @@ export default class ScenarioModel {
         };
     }
 
-    getDefaultScenarios() {
-        return [
-            {
-                id: 1,
-                title: 'No Supermercado',
-                type: 'social',
-                text: 'A caixa do supermercado enganou-se no troco e deu-te menos 2 euros. A fila atrás de ti está grande.',
-                options: [
-                    { text: 'Ficas calado e vais embora para não atrapalhar a fila.', points: 0, feedback: 'Evitaste a situação por medo do confronto. Tenta ser mais assertivo, os teus direitos importam!' },
-                    { text: 'Falas bem alto dizendo que te estão a tentar roubar.', points: 0, feedback: 'Foste agressivo. A assertividade procura o respeito mútuo sem ataques a terceiros.' },
-                    { text: 'Dizes calmamente: "Desculpe, acho que faltam 2 euros no troco."', points: 10, feedback: 'Excelente! Foste claro, educado e defendeste a tua posição com confiança.' }
-                ]
-            },
-            {
-                id: 2,
-                title: 'Apresentação na Aula',
-                type: 'social',
-                text: 'O professor chamou o teu nome para apresentar o trabalho perante a turma inteira. Sentes o coração a bater muito forte.',
-                options: [
-                    { text: 'Levantas-te devagar, respiras fundo 1 vez e começas a falar.', points: 10, feedback: 'Muito bem! Usaste a âncora da respiração (ancoragem) e enfrentaste de imediato a situação.' },
-                    { text: 'Dizes que te sentes mal e pedes para não apresentar hoje.', points: 0, feedback: 'Fugiste do desafio. A fuga traz alívio momentâneo, mas a exposição gradual é o que diminui o medo a longo prazo.' },
-                    { text: 'Lês tudo muito rápido a olhar para o chão, só para despachar.', points: 5, feedback: 'Conseguiste enfrentar grande parte do medo! Da próxima vez, tenta treinar o contacto visual e fazer as pausas.' }
-                ]
-            },
-            {
-                id: 3,
-                title: 'Falar ao Telemóvel',
-                type: 'social',
-                text: 'O teu telemóvel está a tocar. É um número que não tens gravado e estás à espera de uma resposta sobre uma entrevista.',
-                options: [
-                    { text: 'Deixas tocar até ao fim e depois pesquisas o número no Google.', points: 0, feedback: 'A evitação prolonga a tua ansiedade. Enfrentar a chamada quebra imediatamente o ciclo da preocupação.' },
-                    { text: 'Atendes prontamente: "Estou sim, bom dia!"', points: 10, feedback: 'Parabéns! Atender chamadas desconhecidas é um grande passo na habituação social.' },
-                    { text: 'Passas o telemóvel a um amigo ou pai para atenderem por ti.', points: 0, feedback: 'Delegaste a situação (comportamento de segurança). Para ganhares autonomia, tenta atender tu mesmo num ambiente calmo.' }
-                ]
-            },
-            {
-                id: 4,
-                title: 'Iniciar uma Conversa Curta',
-                type: 'soft-skills',
-                text: 'Escolhe alguém da turma ou do trabalho e faz uma pergunta aberta ("Como correu o teu dia?", "O que achaste da aula?").',
-                options: [this.createCompletionOption(15)]
-            },
-            {
-                id: 5,
-                title: 'Pedir Ajuda com Clareza',
-                type: 'soft-skills',
-                text: 'Pede ajuda a um colega ou professor. Diz o que precisas e agradece no final.',
-                options: [this.createCompletionOption(15)]
-            },
-            {
-                id: 6,
-                title: 'Dar um Elogio Sincero',
-                type: 'vida-real',
-                text: 'Elogia alguém de forma simples e sincera ("Gostei da tua apresentação", "Boa explicação!").',
-                options: [this.createCompletionOption(15)]
-            },
-            {
-                id: 7,
-                title: 'Pedir Indicações na Rua',
-                type: 'vida-real',
-                text: 'Pede indicações a uma pessoa na rua ou num estabelecimento. Mantém contacto visual e agradece.',
-                options: [this.createCompletionOption(20)]
-            },
-            {
-                id: 8,
-                title: 'Fazer uma Pergunta em Aula',
-                type: 'vida-real',
-                text: 'Durante uma aula, coloca uma pergunta curta. Pode ser algo que te ajude a compreender melhor.',
-                options: [this.createCompletionOption(20)]
-            },
-            {
-                id: 9,
-                title: 'Apresentação Final de POO',
-                type: 'vida-real',
-                text: 'Faz a apresentação final de POO em frente aos professores. Respira fundo, fala com calma e mantém a tua estrutura.',
-                options: [this.createCompletionOption(50)]
-            },
-            {
-                id: 10,
-                title: 'Telefonar para Marcar',
-                type: 'soft-skills',
-                text: 'Faz uma chamada curta para marcar ou confirmar algo simples. Prepara 2 frases antes de ligar.',
-                options: [this.createCompletionOption(15)]
-            }
-        ];
-    }
-
+    // ── Obter todos os cenários ──
     getAllScenarios() {
         return this.scenarios;
     }
 
+    // ── Obter cenário por ID ──
+    getScenarioById(id) {
+        return this.scenarios.find(s => s.id === id) || null;
+    }
+
+    // ── Adicionar cenário (admin) ──
     addScenario({ title, text, points, type }) {
         const trimmedTitle = title ? title.trim() : '';
         const trimmedText = text ? text.trim() : '';
@@ -169,6 +96,7 @@ export default class ScenarioModel {
         return scenario;
     }
 
+    // ── Remover cenário (admin) ──
     removeScenario(id) {
         const before = this.scenarios.length;
         this.scenarios = this.scenarios.filter(item => item.id !== id);
@@ -177,5 +105,66 @@ export default class ScenarioModel {
             return true;
         }
         return false;
+    }
+
+    // ═══════════════════════════════════════
+    //  SISTEMA DE RECOMENDAÇÃO
+    // ═══════════════════════════════════════
+
+    /**
+     * Gera recomendações personalizadas para o utilizador.
+     * Lógica:
+     * 1. Cenários favoritos que ainda não completou
+     * 2. Cenários de tipos que o user menos praticou (diversificar)
+     * 3. Cenários que o user nunca fez
+     * 
+     * @param {Array} completedIds — IDs de cenários completados pelo user
+     * @param {Array} favoriteIds — IDs de cenários favoritos do user
+     * @param {Array} mostPracticedTypes — tipos mais praticados (ordenados)
+     * @returns {Array} — lista de cenários recomendados (máx 4)
+     */
+    getRecommendations(completedIds, favoriteIds, mostPracticedTypes) {
+        const recommended = [];
+        const allTypes = ['social', 'soft-skills', 'vida-real'];
+
+        // 1. Favoritos não completados
+        this.scenarios.forEach(s => {
+            if (favoriteIds.includes(s.id) && !completedIds.includes(s.id)) {
+                if (!recommended.some(r => r.id === s.id)) {
+                    recommended.push(s);
+                }
+            }
+        });
+
+        // 2. Cenários de tipos menos praticados
+        const leastPracticed = allTypes.filter(t => !mostPracticedTypes.includes(t));
+        // Juntar tipos por ordem inversa (menos praticados primeiro)
+        const typePriority = leastPracticed.concat([...mostPracticedTypes].reverse());
+
+        typePriority.forEach(type => {
+            this.scenarios.forEach(s => {
+                if (s.type === type && !completedIds.includes(s.id)) {
+                    if (!recommended.some(r => r.id === s.id)) {
+                        recommended.push(s);
+                    }
+                }
+            });
+        });
+
+        // 3. Qualquer cenário não completado (fallback)
+        this.scenarios.forEach(s => {
+            if (!completedIds.includes(s.id)) {
+                if (!recommended.some(r => r.id === s.id)) {
+                    recommended.push(s);
+                }
+            }
+        });
+
+        // Devolver no máximo 4 recomendações
+        const result = [];
+        for (let i = 0; i < Math.min(4, recommended.length); i++) {
+            result.push(recommended[i]);
+        }
+        return result;
     }
 }
