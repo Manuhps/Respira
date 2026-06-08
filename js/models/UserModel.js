@@ -29,6 +29,26 @@ export default class UserModel {
                 u.username = (u.nickname !== undefined) ? u.nickname : null;
                 hasMigration = true;
             }
+
+            if (u.breezePoints === undefined) {
+                u.breezePoints = 0;
+                hasMigration = true;
+            }
+
+            if (u.ventinhos === undefined) {
+                u.ventinhos = 0;
+                hasMigration = true;
+            }
+
+            if (u.exerciseStreak === undefined) {
+                u.exerciseStreak = 0;
+                hasMigration = true;
+            }
+
+            if (u.banned === undefined) {
+                u.banned = false;
+                hasMigration = true;
+            }
         });
 
         // Guardar uma vez a migração para não repetir sempre que a app abre.
@@ -58,7 +78,10 @@ export default class UserModel {
             birthDate: userData.birthDate,
             gender: userData.gender,
             username: null,
-            breezePoints: 0
+            breezePoints: 0,
+            ventinhos: 0,
+            exerciseStreak: 0,
+            banned: false
         };
 
         users.push(newUser);
@@ -72,13 +95,18 @@ export default class UserModel {
     login(email, password) {
         const users = this.getUsers();
         const foundUser = users.find(u => u.email === email && u.password === password);
-        
+
         if (foundUser) {
+            if (foundUser.banned) {
+                return { success: false, banned: true };
+            }
+
             this.#user = foundUser;
             localStorage.setItem('respira_current_user', email);
-            return true;
+            return { success: true, banned: false };
         }
-        return false;
+
+        return { success: false, banned: false };
     }
 
     setUsername(username) {
@@ -117,6 +145,66 @@ export default class UserModel {
         }
     }
 
+    completeExercise(points) {
+        if (!this.#user) {
+            return {
+                pointsGained: 0,
+                ventinhoGained: false,
+                streakCount: 0,
+                ventinhos: 0
+            };
+        }
+
+        const pointsGained = Number.isFinite(points) ? Math.max(0, Math.round(points)) : 0;
+        this.#user.breezePoints += pointsGained;
+
+        let ventinhoGained = false;
+        const nextStreak = (this.#user.exerciseStreak || 0) + 1;
+
+        if (nextStreak >= 3) {
+            this.#user.exerciseStreak = 0;
+            this.#user.ventinhos = (this.#user.ventinhos || 0) + 1;
+            ventinhoGained = true;
+        } else {
+            this.#user.exerciseStreak = nextStreak;
+        }
+
+        const users = this.getUsers();
+        const index = users.findIndex(u => u.email === this.#user.email);
+        if (index !== -1) {
+            users[index].breezePoints = this.#user.breezePoints;
+            users[index].exerciseStreak = this.#user.exerciseStreak;
+            users[index].ventinhos = this.#user.ventinhos;
+            this.saveUsers(users);
+        }
+
+        return {
+            pointsGained,
+            ventinhoGained,
+            streakCount: this.#user.exerciseStreak,
+            ventinhos: this.#user.ventinhos
+        };
+    }
+
+    listUsers() {
+        return this.getUsers();
+    }
+
+    setUserBanned(email, isBanned) {
+        const users = this.getUsers();
+        const index = users.findIndex(u => u.email === email);
+        if (index === -1) return false;
+
+        users[index].banned = Boolean(isBanned);
+        this.saveUsers(users);
+
+        if (this.#user && this.#user.email === email) {
+            this.#user.banned = Boolean(isBanned);
+        }
+
+        return true;
+    }
+
     get name() {
         if (!this.#user) return null;
         // Preferimos `username`, mas aceitamos `nickname` (dados antigos).
@@ -134,6 +222,26 @@ export default class UserModel {
 
     get points() {
         return this.#user ? this.#user.breezePoints : 0;
+    }
+
+    get ventinhos() {
+        return this.#user ? this.#user.ventinhos : 0;
+    }
+
+    get streakCount() {
+        return this.#user ? this.#user.exerciseStreak : 0;
+    }
+
+    get currentEmail() {
+        return this.#user ? this.#user.email : null;
+    }
+
+    get isAdminEnabled() {
+        return JSON.parse(localStorage.getItem('respira_admin_enabled')) === true;
+    }
+
+    get isBanned() {
+        return this.#user ? Boolean(this.#user.banned) : false;
     }
 
     get isLogged() {

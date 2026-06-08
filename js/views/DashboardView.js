@@ -35,16 +35,23 @@ export default class DashboardView extends BaseView {
         };
     }
 
-    renderDashboard(userName, points, catalogCallback, breathingCallback, logoutCallback, profileCallback) {
+    renderDashboard(userName, points, ventinhos, streakCount, isAdmin, catalogCallback, breathingCallback, logoutCallback, profileCallback, adminCallback) {
         this.clearTimeouts();
 
         const avatar = this.getAvatarInfo(points);
+
+        const adminButton = isAdmin
+            ? '<button id="btnAdmin" class="btn-admin">Admin</button>'
+            : '';
 
         this.appElement.innerHTML = `
             <div class="screen dashboard">
                 <div class="topbar">
                     <div class="logo">Respira</div>
-                    <button id="btnProfile" class="btn-profile">Perfil</button>
+                    <div class="topbar-actions">
+                        ${adminButton}
+                        <button id="btnProfile" class="btn-profile">Perfil</button>
+                    </div>
                 </div>
 
                 <div class="avatar-area">
@@ -56,6 +63,8 @@ export default class DashboardView extends BaseView {
                 <div class="stats">
                     <p>Os teus Pontos de Brisa</p>
                     <h2>🌬️ ${points}</h2>
+                    <p class="stats-line">Ventinhos: 💨 ${ventinhos}</p>
+                    <p class="stats-line">Sequência: ${streakCount}/3</p>
                 </div>
                 <div class="options">
                     <button id="btnCatalog">Catálogo de Desafios</button>
@@ -79,6 +88,11 @@ export default class DashboardView extends BaseView {
             profileBtn.addEventListener('click', profileCallback);
         }
 
+        const adminBtn = document.getElementById('btnAdmin');
+        if (adminBtn && adminCallback) {
+            adminBtn.addEventListener('click', adminCallback);
+        }
+
         const bubbleInfo = document.getElementById('bubbleInfo');
         if (bubbleInfo) {
             bubbleInfo.addEventListener('click', (event) => {
@@ -96,7 +110,7 @@ export default class DashboardView extends BaseView {
         }
     }
 
-    renderProfileModal(userName, points, quote, adminCallback) {
+    renderProfileModal(userName, points, ventinhos, streakCount, quote, adminCallback) {
         this.closeModal();
 
         const avatar = this.getAvatarInfo(points);
@@ -123,6 +137,14 @@ export default class DashboardView extends BaseView {
                     <div class="profile-row">
                         <span>Pontos de Brisa</span>
                         <strong>${points}</strong>
+                    </div>
+                    <div class="profile-row">
+                        <span>Ventinhos</span>
+                        <strong>💨 ${ventinhos}</strong>
+                    </div>
+                    <div class="profile-row">
+                        <span>Sequência</span>
+                        <strong>${streakCount}/3</strong>
                     </div>
                 </div>
 
@@ -154,6 +176,135 @@ export default class DashboardView extends BaseView {
             event.preventDefault();
             if (adminCallback) adminCallback();
             if (adminMsg) adminMsg.textContent = "Modo admin preparado.";
+        });
+    }
+
+    renderAdminPanel(scenarios, users, currentEmail, addCallback, removeCallback, toggleBanCallback) {
+        this.closeModal();
+
+        const typeLabel = (value) => {
+            if (value === 'vida-real') return 'Vida real';
+            if (value === 'soft-skills') return 'Soft skills';
+            return 'Social';
+        };
+
+        const scenarioRows = scenarios.map((scenario) => {
+            const label = typeLabel(scenario.type);
+            return `
+                <div class="admin-row">
+                    <div class="admin-row-info">
+                        <strong>${scenario.title}</strong>
+                        <span class="admin-tag">${label}</span>
+                    </div>
+                    <button class="admin-remove" data-id="${scenario.id}">Remover</button>
+                </div>
+            `;
+        }).join('');
+
+        const userRows = users.map((user) => {
+            const isCurrent = user.email === currentEmail;
+            const statusLabel = user.banned ? 'Suspenso' : 'Ativo';
+            const actionLabel = user.banned ? 'Desbanir' : 'Banir';
+            const disabledAttr = isCurrent ? 'disabled' : '';
+            const infoSuffix = isCurrent ? ' (tu)' : '';
+
+            return `
+                <div class="admin-row">
+                    <div class="admin-row-info">
+                        <strong>${user.firstName} ${user.lastName}${infoSuffix}</strong>
+                        <span class="admin-tag">${statusLabel}</span>
+                    </div>
+                    <button class="admin-ban" data-email="${user.email}" data-next="${user.banned ? 'false' : 'true'}" ${disabledAttr}>
+                        ${actionLabel}
+                    </button>
+                </div>
+            `;
+        }).join('');
+
+        const overlay = document.createElement('div');
+        overlay.id = 'respira-modal-overlay';
+        overlay.className = 'modal-overlay';
+
+        overlay.innerHTML = `
+            <div class="modal admin-modal" role="dialog" aria-modal="true">
+                <button type="button" class="modal-close" id="admin-modal-close">&#10005;</button>
+                <h3 class="modal-title">Painel Admin</h3>
+
+                <div class="admin-section">
+                    <h4>Adicionar exercício</h4>
+                    <form id="admin-add-form" class="admin-form">
+                        <input type="text" id="admin-title" placeholder="Título do exercício" required />
+                        <textarea id="admin-text" placeholder="Descrição do exercício" rows="4" required></textarea>
+                        <div class="admin-form-row">
+                            <input type="number" id="admin-points" min="1" max="100" value="15" />
+                            <select id="admin-type">
+                                <option value="soft-skills">Soft skills</option>
+                                <option value="vida-real">Vida real</option>
+                                <option value="social">Social</option>
+                            </select>
+                        </div>
+                        <button type="submit">Adicionar</button>
+                    </form>
+                </div>
+
+                <div class="admin-section">
+                    <h4>Exercícios</h4>
+                    <div class="admin-list">
+                        ${scenarioRows || '<p class="admin-empty">Ainda não existem exercícios.</p>'}
+                    </div>
+                </div>
+
+                <div class="admin-section">
+                    <h4>Utilizadores</h4>
+                    <div class="admin-list">
+                        ${userRows || '<p class="admin-empty">Sem utilizadores registados.</p>'}
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        const closeBtn = document.getElementById('admin-modal-close');
+        closeBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            this.closeModal();
+        });
+
+        overlay.addEventListener('click', (event) => {
+            if (event.target === overlay) {
+                this.closeModal();
+            }
+        });
+
+        const form = document.getElementById('admin-add-form');
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            const title = document.getElementById('admin-title').value.trim();
+            const text = document.getElementById('admin-text').value.trim();
+            const points = Number(document.getElementById('admin-points').value);
+            const type = document.getElementById('admin-type').value;
+
+            if (addCallback) {
+                addCallback({ title, text, points, type });
+            }
+        });
+
+        overlay.querySelectorAll('.admin-remove').forEach((btn) => {
+            btn.addEventListener('click', (event) => {
+                event.preventDefault();
+                const id = Number(event.currentTarget.getAttribute('data-id'));
+                if (removeCallback) removeCallback(id);
+            });
+        });
+
+        overlay.querySelectorAll('.admin-ban').forEach((btn) => {
+            btn.addEventListener('click', (event) => {
+                event.preventDefault();
+                const email = event.currentTarget.getAttribute('data-email');
+                const shouldBan = event.currentTarget.getAttribute('data-next') === 'true';
+                if (toggleBanCallback) toggleBanCallback(email, shouldBan);
+            });
         });
     }
 
