@@ -46,9 +46,14 @@ export default class AppController {
     }
 
     handleLogin(email, password) {
-        const success = this.userModel.login(email, password);
-        if (success) {
+        const result = this.userModel.login(email, password);
+        if (result.success) {
             this.askForUsernameAndGoToDashboard();
+        } else if (result.banned) {
+            this.authView.showMessageModal(
+                "Conta suspensa",
+                "Esta conta está temporariamente suspensa. Se precisares de ajuda, fala com a administração."
+            );
         } else {
             // Modal (pop-up) em vez de alert para uma UX mais profissional.
             this.authView.showMessageModal(
@@ -120,10 +125,14 @@ export default class AppController {
         this.dashboardView.renderDashboard(
             this.userModel.name, // Retorna o username (se existir) ou o nome real
             this.userModel.points,
+            this.userModel.ventinhos,
+            this.userModel.streakCount,
+            this.userModel.isAdminEnabled,
             this.goToCatalog.bind(this),
             this.goToBreathing.bind(this),
             this.handleLogout.bind(this),
-            this.handleProfile.bind(this)
+            this.handleProfile.bind(this),
+            this.openAdminPanel.bind(this)
         );
     }
 
@@ -133,6 +142,8 @@ export default class AppController {
         this.dashboardView.renderProfileModal(
             this.userModel.name,
             this.userModel.points,
+            this.userModel.ventinhos,
+            this.userModel.streakCount,
             quote,
             this.handleAdminFlag.bind(this)
         );
@@ -140,6 +151,60 @@ export default class AppController {
 
     handleAdminFlag() {
         localStorage.setItem('respira_admin_enabled', JSON.stringify(true));
+    }
+
+    openAdminPanel() {
+        if (!this.userModel.isAdminEnabled) {
+            this.authView.showMessageModal(
+                "Acesso restrito",
+                "Ativa o modo admin no teu perfil para gerir exercícios e utilizadores."
+            );
+            return;
+        }
+
+        this.dashboardView.renderAdminPanel(
+            this.scenarioModel.getAllScenarios(),
+            this.userModel.listUsers(),
+            this.userModel.currentEmail,
+            this.handleAddExercise.bind(this),
+            this.handleRemoveExercise.bind(this),
+            this.handleToggleBan.bind(this)
+        );
+    }
+
+    handleAddExercise(exerciseData) {
+        const created = this.scenarioModel.addScenario(exerciseData);
+        if (!created) {
+            this.authView.showMessageModal(
+                "Dados incompletos",
+                "Preenche o título e a descrição do exercício para continuar."
+            );
+            return;
+        }
+
+        this.openAdminPanel();
+    }
+
+    handleRemoveExercise(id) {
+        this.scenarioModel.removeScenario(id);
+        this.openAdminPanel();
+    }
+
+    handleToggleBan(email, shouldBan) {
+        const updated = this.userModel.setUserBanned(email, shouldBan);
+        if (!updated) return;
+
+        if (shouldBan && email === this.userModel.currentEmail) {
+            this.userModel.logout();
+            this.goToLanding();
+            this.authView.showMessageModal(
+                "Conta suspensa",
+                "A tua conta foi suspensa pelo modo admin."
+            );
+            return;
+        }
+
+        this.openAdminPanel();
     }
 
     goToCatalog() {
@@ -161,19 +226,20 @@ export default class AppController {
         this.history.push(this.goToCatalog.bind(this));
         this.scenarioView.renderScenario(
             scenario, 
-            this.handleOptionSelected.bind(this),
+            (option) => this.handleOptionSelected(scenario, option),
             this.handleBack.bind(this)
         );
     }
 
-    handleOptionSelected(option) {
-        if (option.points > 0) {
-            this.userModel.addPoints(option.points);
-        }
+    handleOptionSelected(scenario, option) {
+        const result = this.userModel.completeExercise(option.points);
 
         this.scenarioView.renderFeedback(
-            option.feedback, 
-            option.points, 
+            option.feedback,
+            result.pointsGained,
+            result.ventinhoGained,
+            result.streakCount,
+            result.ventinhos,
             this.handleBack.bind(this)
         );
     }
