@@ -30,10 +30,8 @@ export default class BadgeModel {
         const newBadges = [];
 
         const totalExercises = Array.isArray(userData.completedExercises) ? userData.completedExercises.length : 0;
-        const totalFavorites = Array.isArray(userData.favorites) ? userData.favorites.length : 0;
         const totalVentinhos = userData.ventinhos || 0;
         const totalQuizzes = userData.quizzesCompleted || 0;
-        const totalPoints = userData.breezePoints || 0;
 
         // Primeiro Passo: 1 exercício completado
         if (totalExercises >= 1 && !earned.includes('first_step')) {
@@ -60,21 +58,10 @@ export default class BadgeModel {
             newBadges.push('quiz_start');
         }
 
-        // Colecionador: 3 favoritos
-        if (totalFavorites >= 3 && !earned.includes('collector')) {
-            newBadges.push('collector');
-        }
-
         // Mestre da Sequência: 5 ventinhos
         if (totalVentinhos >= 5 && !earned.includes('streak_master')) {
             newBadges.push('streak_master');
         }
-
-        // Centurião: 100 pontos
-        if (totalPoints >= 100 && !earned.includes('centurion')) {
-            newBadges.push('centurion');
-        }
-
         return newBadges;
     }
 }

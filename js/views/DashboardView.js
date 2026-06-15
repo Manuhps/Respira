@@ -1,4 +1,5 @@
 import BaseView from './BaseView.js';
+import { getRandomVideo } from '../utils/videos.js';
 
 /**
  * DashboardView — Vista principal após autenticação.
@@ -248,7 +249,7 @@ export default class DashboardView extends BaseView {
         // Eventos de play
         document.querySelectorAll('.catalog-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                const id = parseInt(e.target.getAttribute('data-id'));
+                const id = parseInt(btn.getAttribute('data-id'));
                 const scenario = scenarios.find(s => s.id === id);
                 if (scenario) playCallback(scenario);
             });
@@ -258,7 +259,7 @@ export default class DashboardView extends BaseView {
         document.querySelectorAll('.fav-toggle').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                const id = parseInt(e.currentTarget.getAttribute('data-id'));
+                const id = parseInt(btn.getAttribute('data-id'));
                 if (toggleFavCallback) toggleFavCallback(id);
             });
         });
@@ -313,7 +314,7 @@ export default class DashboardView extends BaseView {
             const actionLabel = user.banned ? 'Desbanir' : 'Banir';
             const disabledAttr = isCurrent ? 'disabled' : '';
             const infoSuffix = isCurrent ? ' (tu)' : '';
-            const roleTag = user.role === 'admin' ? ' 👑' : '';
+            const roleTag = user.role === 'admin' ? '' : '';
             const exercisesCount = Array.isArray(user.completedExercises) ? user.completedExercises.length : 0;
 
             return `
@@ -336,10 +337,10 @@ export default class DashboardView extends BaseView {
         overlay.innerHTML = `
             <div class="modal admin-modal" role="dialog" aria-modal="true">
                 <button type="button" class="modal-close" id="admin-modal-close">&#10005;</button>
-                <h3 class="modal-title">👑 Painel Admin</h3>
+                <h3 class="modal-title">Painel Admin</h3>
 
                 <div class="admin-section">
-                    <h4>📊 Estatísticas</h4>
+                    <h4>Estatísticas</h4>
                     <div class="admin-stats-grid">
                         <div class="admin-stat"><strong>${totalUsers}</strong><span>Utilizadores</span></div>
                         <div class="admin-stat"><strong>${scenarios.length}</strong><span>Exercícios</span></div>
@@ -399,7 +400,7 @@ export default class DashboardView extends BaseView {
             const text = document.getElementById('admin-text').value.trim();
             const points = Number(document.getElementById('admin-points').value);
             const type = document.getElementById('admin-type').value;
-            if (callbacks.addExercise) callbacks.addExercise({ title, text, points, type });
+            if (callbacks.addExercise) callbacks.addExercise({ title: title, text: text, points: points, type: type });
         });
 
 
@@ -408,7 +409,7 @@ export default class DashboardView extends BaseView {
         overlay.querySelectorAll('.admin-remove').forEach((btn) => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                const id = Number(e.currentTarget.getAttribute('data-id'));
+                const id = Number(btn.getAttribute('data-id'));
                 if (callbacks.removeExercise) callbacks.removeExercise(id);
             });
         });
@@ -417,8 +418,8 @@ export default class DashboardView extends BaseView {
         overlay.querySelectorAll('.admin-ban').forEach((btn) => {
             btn.addEventListener('click', (e) => {
                 e.preventDefault();
-                const email = e.currentTarget.getAttribute('data-email');
-                const shouldBan = e.currentTarget.getAttribute('data-next') === 'true';
+                const email = btn.getAttribute('data-email');
+                const shouldBan = btn.getAttribute('data-next') === 'true';
                 if (callbacks.toggleBan) callbacks.toggleBan(email, shouldBan);
             });
         });
@@ -455,6 +456,8 @@ export default class DashboardView extends BaseView {
 
     renderResourcesModal() {
         this.closeModal();
+        const video = getRandomVideo();
+
         const overlay = document.createElement('div');
         overlay.id = 'respira-modal-overlay';
         overlay.className = 'modal-overlay';
@@ -472,8 +475,8 @@ export default class DashboardView extends BaseView {
                 </ul>
                 <iframe
                     class="relax-video"
-                    src="https://www.youtube.com/embed/eVFzbxmKNUw"
-                    title="Como ganhar confiança"
+                    src="https://www.youtube.com/embed/${video.id}"
+                    title="${video.title}"
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen
                 ></iframe>
@@ -525,7 +528,7 @@ export default class DashboardView extends BaseView {
         const cycle = () => {
             if (!document.getElementById('breatheCircle')) return;
 
-            text.innerText = "Inspira (4s)";
+            text.textContent = "Inspira (4s)";
             circle.style.transition = "transform 4s linear, background-color 4s";
             circle.style.transform = "scale(1.8)";
             circle.style.backgroundColor = "var(--color-15)";
@@ -533,14 +536,14 @@ export default class DashboardView extends BaseView {
             this.breathTimeout1 = setTimeout(() => {
                 if (!document.getElementById('breatheCircle')) return;
 
-                text.innerText = "Sustém (7s)";
+                text.textContent = "Sustém (7s)";
                 circle.style.backgroundColor = "var(--color-10)";
                 circle.style.color = "var(--color-black)";
 
                 this.breathTimeout2 = setTimeout(() => {
                     if (!document.getElementById('breatheCircle')) return;
 
-                    text.innerText = "Expira (8s)";
+                    text.textContent = "Expira (8s)";
                     circle.style.transition = "transform 8s linear, background-color 8s";
                     circle.style.transform = "scale(1)";
                     circle.style.backgroundColor = "var(--color-60)";

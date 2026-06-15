@@ -191,9 +191,7 @@ export default class MockServer {
             { id: 'warrior', name: 'Guerreiro Calmo', description: 'Completaste 10 exercícios.', icon: '🛡️' },
             { id: 'breeze', name: 'Primeira Brisa', description: 'Ganhaste o teu primeiro Ventinho!', icon: '💨' },
             { id: 'quiz_start', name: 'Curioso', description: 'Completaste o teu primeiro quiz.', icon: '❓' },
-            { id: 'collector', name: 'Colecionador', description: 'Adicionaste 3 favoritos.', icon: '❤️' },
             { id: 'streak_master', name: 'Mestre da Sequência', description: 'Alcançaste 5 Ventinhos!', icon: '🌪️' },
-            { id: 'centurion', name: 'Centurião', description: 'Atingiste 100 Pontos de Brisa!', icon: '💯' }
         ];
     }
 
