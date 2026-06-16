@@ -20,8 +20,8 @@ export default class DashboardView extends BaseView {
         clearTimeout(this.breathTimeout3);
     }
 
-    getAvatarInfo(exerciseCount) {
-        if (exerciseCount >= 5) {
+    getAvatarInfo(points) {
+        if (points >= 20) {
             return { src: "./img/Good.png", label: "Avatar" };
         }
         return { src: "./img/Sab.png", label: "Avatar" };
@@ -33,7 +33,7 @@ export default class DashboardView extends BaseView {
 
     renderDashboard(userName, points, ventinhos, streakCount, isAdmin, exerciseCount, callbacks) {
         this.clearTimeouts();
-        const avatar = this.getAvatarInfo(exerciseCount);
+        const avatar = this.getAvatarInfo(points);
 
         const adminButton = isAdmin
             ? '<button id="btnAdmin" class="btn-admin">Admin</button>'

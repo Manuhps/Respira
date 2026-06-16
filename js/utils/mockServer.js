@@ -69,6 +69,21 @@ export default class MockServer {
                 id: 10, title: 'Telefonar para Marcar', type: 'soft-skills',
                 text: 'Faz uma chamada curta para marcar ou confirmar algo simples. Prepara 2 frases antes de ligar.',
                 options: [{ text: 'Concluí o exercício', points: 15, feedback: 'Excelente! Registaste o exercício como concluído.' }]
+            },
+            {
+                id: 11, title: 'Dizer "Não" com Educação', type: 'soft-skills',
+                text: 'Pratica rejeitar um pedido de forma assertiva e educada. Exemplo: "Gostava muito de ajudar, mas neste momento não consigo."',
+                options: [{ text: 'Concluí o exercício', points: 20, feedback: 'Excelente! Dizer "não" é um direito teu e demonstra respeito pelo teu próprio tempo.' }]
+            },
+            {
+                id: 12, title: 'Conversar com um Lojista', type: 'vida-real',
+                text: 'Entra numa loja, pergunta o preço ou informações sobre um produto a um assistente, e no final agradece com um sorriso.',
+                options: [{ text: 'Concluí o exercício', points: 25, feedback: 'Muito bem! Pequenas interações diárias fortalecem a tua confiança social.' }]
+            },
+            {
+                id: 13, title: 'Reconhecer um Erro e Pedir Desculpa', type: 'soft-skills',
+                text: 'Quando cometeres um pequeno erro hoje, em vez de inventar desculpas, diz simplesmente: "Tens razão, foi erro meu. Peço desculpa."',
+                options: [{ text: 'Concluí o exercício', points: 30, feedback: 'Excelente! Assumir erros demonstra maturidade e inteligência emocional.' }]
             }
         ];
     }
