@@ -16,9 +16,9 @@ export default class QuizView extends BaseView {
                 <h2>Quiz: Ansiedade Social</h2>
                 <p>Testa os teus conhecimentos sobre ansiedade social e técnicas para lidar com ela.</p>
                 <div class="quiz-info-card">
-                    <p class="quiz-detail">📝 ${totalQuestions} perguntas</p>
-                    <p class="quiz-detail">⏱️ Sem limite de tempo</p>
-                    <p class="quiz-detail">🌬️ Ganha pontos por cada resposta certa!</p>
+                    <p class="quiz-detail">${totalQuestions} perguntas</p>
+                    <p class="quiz-detail">Sem limite de tempo</p>
+                    <p class="quiz-detail">Ganha pontos por cada resposta certa!</p>
                 </div>
                 <div class="options">
                     <button id="btnStartQuiz">Começar Quiz</button>
@@ -85,23 +85,19 @@ export default class QuizView extends BaseView {
     // ── Resultados finais do quiz ──
     renderQuizResults(totalCorrect, totalQuestions, totalPoints, backCallback) {
         const percentage = Math.round((totalCorrect / totalQuestions) * 100);
-        let emoji = '🌱';
         let message = 'Continua a aprender!';
 
         if (percentage >= 80) {
-            emoji = '🏆';
             message = 'Excelente! Tens um ótimo conhecimento!';
         } else if (percentage >= 60) {
-            emoji = '💪';
             message = 'Bom trabalho! Estás no caminho certo.';
         } else if (percentage >= 40) {
-            emoji = '📚';
             message = 'Não desistas! O conhecimento cresce com a prática.';
         }
 
         this.appElement.innerHTML = `
             <div class="screen quiz-results">
-                <h2>${emoji} Resultados do Quiz</h2>
+                <h2>Resultados do Quiz</h2>
                 <div class="quiz-results-card">
                     <p class="quiz-score">${totalCorrect}/${totalQuestions}</p>
                     <p class="quiz-percentage">${percentage}% corretas</p>

@@ -111,9 +111,20 @@ export default class UserModel {
     _syncCurrentUser() {
         if (!this.#user) return;
         const users = this.getUsers();
-        const index = users.findIndex(u => u.email === this.#user.email);
+        let index = -1;
+        for (let i = 0; i < users.length; i++) {
+            if (users[i].email === this.#user.email) {
+                index = i;
+                break;
+            }
+        }
         if (index !== -1) {
-            users[index] = { ...this.#user };
+            // Copiar as propriedades do user atual para o array
+            const copy = {};
+            for (const key in this.#user) {
+                copy[key] = this.#user[key];
+            }
+            users[index] = copy;
             this.saveUsers(users);
         }
     }
@@ -219,7 +230,7 @@ export default class UserModel {
             };
         }
 
-        const pointsGained = Number.isFinite(points) ? Math.max(0, Math.round(points)) : 0;
+        const pointsGained = (typeof points === 'number' && !isNaN(points)) ? Math.max(0, Math.round(points)) : 0;
         this.#user.breezePoints += pointsGained;
 
         // Registar no histórico
@@ -282,7 +293,7 @@ export default class UserModel {
     }
 
     get favorites() {
-        return this.#user ? [...this.#user.favorites] : [];
+        return this.#user ? this.#user.favorites.filter(function() { return true; }) : [];
     }
 
     // ═══════════════════════════════════════
@@ -290,7 +301,7 @@ export default class UserModel {
     // ═══════════════════════════════════════
 
     get completedExercises() {
-        return this.#user ? [...this.#user.completedExercises] : [];
+        return this.#user ? this.#user.completedExercises.filter(function() { return true; }) : [];
     }
 
     get totalExercisesCompleted() {
@@ -310,7 +321,7 @@ export default class UserModel {
     }
 
     get badges() {
-        return this.#user ? [...this.#user.badges] : [];
+        return this.#user ? this.#user.badges.filter(function() { return true; }) : [];
     }
 
     // ═══════════════════════════════════════
@@ -353,7 +364,13 @@ export default class UserModel {
 
     setUserBanned(email, isBanned) {
         const users = this.getUsers();
-        const index = users.findIndex(u => u.email === email);
+        let index = -1;
+        for (let i = 0; i < users.length; i++) {
+            if (users[i].email === email) {
+                index = i;
+                break;
+            }
+        }
         if (index === -1) return false;
 
         users[index].banned = Boolean(isBanned);

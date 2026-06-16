@@ -77,7 +77,6 @@ export default class AppController {
     handleLogin(email, password) {
         const result = this.userModel.login(email, password);
         if (result.success) {
-            this._generateAutoNotifications();
             this.askForUsernameAndGoToDashboard();
         } else if (result.banned) {
             this.authView.showMessageModal(

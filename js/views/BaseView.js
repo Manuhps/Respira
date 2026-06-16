@@ -10,7 +10,7 @@ export default class BaseView {
     closeModal() {
         const existingOverlay = document.getElementById('respira-modal-overlay');
         if (existingOverlay) {
-            existingOverlay.remove();
+            existingOverlay.parentNode.removeChild(existingOverlay);
         }
     }
 
@@ -112,7 +112,7 @@ export default class BaseView {
 
     renderBackButton(onBackCallback) {
         const existingBtn = this.appElement.querySelector('.btn-back-arrow');
-        if (existingBtn) existingBtn.remove();
+        if (existingBtn) existingBtn.parentNode.removeChild(existingBtn);
 
         const backBtn = document.createElement('button');
         backBtn.className = 'btn-back-arrow';
@@ -120,6 +120,6 @@ export default class BaseView {
         backBtn.title = "Voltar";
         backBtn.addEventListener('click', onBackCallback);
         
-        this.appElement.prepend(backBtn);
+        this.appElement.insertBefore(backBtn, this.appElement.firstChild);
     }
 }

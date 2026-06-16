@@ -16,8 +16,7 @@ export default class QuizModel {
 
     // ── Obter N perguntas aleatórias (para uma sessão de quiz) ──
     getRandomQuestions(count) {
-        // Copiar o array para não alterar o original
-        const shuffled = [...this.questions];
+        const shuffled = this.questions.filter(function() { return true; });
 
         // Algoritmo de Fisher-Yates para baralhar
         for (let i = shuffled.length - 1; i > 0; i--) {

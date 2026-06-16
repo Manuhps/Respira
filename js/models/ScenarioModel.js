@@ -20,7 +20,11 @@ export default class ScenarioModel {
         let hasChanges = false;
 
         const normalized = list.map((scenario, index) => {
-            const copy = { ...scenario };
+            // Copiar o objeto para não alterar o original
+            const copy = {};
+            for (const key in scenario) {
+                copy[key] = scenario[key];
+            }
 
             if (!copy.id) {
                 copy.id = index + 1;
@@ -54,7 +58,7 @@ export default class ScenarioModel {
 
     // ── Criar opção de conclusão simples ──
     createCompletionOption(points) {
-        const safePoints = Number.isFinite(points) && points > 0 ? Math.round(points) : 10;
+        const safePoints = (typeof points === 'number' && !isNaN(points) && points > 0) ? Math.round(points) : 10;
         return {
             text: 'Concluí o exercício',
             points: safePoints,
@@ -73,22 +77,22 @@ export default class ScenarioModel {
     }
 
     // ── Adicionar cenário (admin) ──
-    addScenario({ title, text, points, type }) {
-        const trimmedTitle = title ? title.trim() : '';
-        const trimmedText = text ? text.trim() : '';
+    addScenario(data) {
+        const trimmedTitle = data.title ? data.title.trim() : '';
+        const trimmedText = data.text ? data.text.trim() : '';
 
         if (!trimmedTitle || !trimmedText) {
             return null;
         }
 
-        const safeType = type || 'soft-skills';
+        const safeType = data.type || 'soft-skills';
         const nextId = this.scenarios.reduce((maxId, item) => Math.max(maxId, item.id || 0), 0) + 1;
         const scenario = {
             id: nextId,
             title: trimmedTitle,
             type: safeType,
             text: trimmedText,
-            options: [this.createCompletionOption(points)]
+            options: [this.createCompletionOption(data.points)]
         };
 
         this.scenarios.push(scenario);
@@ -139,7 +143,10 @@ export default class ScenarioModel {
         // 2. Cenários de tipos menos praticados
         const leastPracticed = allTypes.filter(t => !mostPracticedTypes.includes(t));
         // Juntar tipos por ordem inversa (menos praticados primeiro)
-        const typePriority = leastPracticed.concat([...mostPracticedTypes].reverse());
+        const reversed = mostPracticedTypes.filter(function() { return true; }).reverse();
+        const typePriority = [];
+        leastPracticed.forEach(function(t) { typePriority.push(t); });
+        reversed.forEach(function(t) { typePriority.push(t); });
 
         typePriority.forEach(type => {
             this.scenarios.forEach(s => {
