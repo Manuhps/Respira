@@ -21,7 +21,7 @@ export default class DashboardView extends BaseView {
     }
 
     getAvatarInfo(points) {
-        if (points >= 20) {
+        if (points >= 50) {
             return { src: "./img/Good.png", label: "Avatar" };
         }
         return { src: "./img/Sab.png", label: "Avatar" };

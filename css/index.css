@@ -196,7 +196,7 @@ button:active {
 
 .option-btn {
 	text-align: left;
-	padding: 15px;
+	padding: 15px 20px;
 	border: 2px solid transparent;
 	border-radius: 12px;
 	background: var(--card-bg-soft);
@@ -205,6 +205,9 @@ button:active {
 	font-size: 16px;
 	font-weight: 500;
 	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+	display: flex;
+	align-items: center;
+	min-height: 54px;
 }
 
 .option-btn:hover {
@@ -521,11 +524,14 @@ button:active {
 
 .catalog-tag {
 	font-size: 12px;
-	padding: 4px 10px;
+	padding: 6px 0;
 	border-radius: 10px;
 	background: var(--btn-secondary);
 	color: var(--text-main);
 	white-space: nowrap;
+	width: 90px;
+	text-align: center;
+	flex-shrink: 0;
 }
 
 .catalog-divider {
@@ -545,6 +551,11 @@ button:active {
 	box-shadow: none;
 	cursor: pointer;
 	transition: transform 0.2s;
+	width: 32px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	flex-shrink: 0;
 }
 
 .fav-toggle:hover {
