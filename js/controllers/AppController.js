@@ -172,7 +172,17 @@ export default class AppController {
             badges,
             badgeDefs,
             this.userModel.totalExercisesCompleted,
-            this.userModel.favorites.length
+            this.userModel.favorites.length,
+            this.userModel.quizzesCompleted,
+            this.userModel.profilePic,
+            (base64String) => {
+                this.userModel.setProfilePic(base64String);
+                this.handleProfile();
+                this.dashboardView.showMessageModal(
+                    "Foto de Perfil",
+                    "A tua foto de perfil foi atualizada com sucesso!"
+                );
+            }
         );
     }
 
@@ -249,6 +259,16 @@ export default class AppController {
 
     goToQuiz() {
         this.history.push(this.goToDashboard.bind(this));
+        
+        const quizStatus = this.userModel.canTakeQuiz();
+        if (!quizStatus.canTake) {
+            this.authView.showMessageModal(
+                "Quiz Indisponível",
+                `Ainda tens de esperar ${quizStatus.remainingMinutes} minutos antes de fazer outro quiz. Respira e descansa um pouco!`
+            );
+            return;
+        }
+
         const allQuestions = this.quizModel.getAllQuestions();
 
         if (allQuestions.length === 0) {
@@ -310,6 +330,7 @@ export default class AppController {
 
     _finishQuiz() {
         this.userModel.incrementQuizzesCompleted();
+        this.userModel.setLastQuizTime();
         this._checkAndAwardBadges();
 
         this.quizView.renderQuizResults(
@@ -378,27 +399,52 @@ export default class AppController {
         }
 
         this.openAdminPanel();
+        this.dashboardView.showMessageModal(
+            "Exercício Adicionado",
+            "O novo exercício foi adicionado com sucesso."
+        );
     }
 
     handleRemoveExercise(id) {
         this.scenarioModel.removeScenario(id);
         this.openAdminPanel();
+        this.dashboardView.showMessageModal(
+            "Exercício Removido",
+            "O exercício foi removido com sucesso."
+        );
     }
 
     handleToggleBan(email, shouldBan) {
-        const updated = this.userModel.setUserBanned(email, shouldBan);
-        if (!updated) return;
+        const actionText = shouldBan ? "banir" : "desbanir";
+        
+        this.dashboardView.showConfirmModal(
+            "Confirmação",
+            `Tem a certeza que quer ${actionText} o utilizador ${email}?`,
+            `Sim, ${actionText}`,
+            "Cancelar",
+            () => {
+                const updated = this.userModel.setUserBanned(email, shouldBan);
+                if (!updated) return;
 
-        if (shouldBan && email === this.userModel.currentEmail) {
-            this.userModel.logout();
-            this.goToLanding();
-            this.authView.showMessageModal(
-                "Conta suspensa",
-                "A tua conta foi suspensa pelo administrador."
-            );
-            return;
-        }
+                if (shouldBan && email === this.userModel.currentEmail) {
+                    this.userModel.logout();
+                    this.goToLanding();
+                    this.authView.showMessageModal(
+                        "Conta suspensa",
+                        "A sua conta foi suspensa pelo administrador."
+                    );
+                    return;
+                }
 
-        this.openAdminPanel();
+                this.openAdminPanel();
+                this.dashboardView.showMessageModal(
+                    "Sucesso",
+                    `O utilizador foi ${shouldBan ? 'banido' : 'desbanido'} com sucesso.`
+                );
+            },
+            () => {
+                this.openAdminPanel(); // Reabrir admin caso tenha fechado a modal
+            }
+        );
     }
 }

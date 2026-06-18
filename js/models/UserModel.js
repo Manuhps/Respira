@@ -93,6 +93,16 @@ export default class UserModel {
                 u.lastLogin = null;
                 hasMigration = true;
             }
+
+            if (u.lastQuizTime === undefined) {
+                u.lastQuizTime = null;
+                hasMigration = true;
+            }
+
+            if (u.profilePic === undefined) {
+                u.profilePic = null;
+                hasMigration = true;
+            }
         });
 
         if (hasMigration) {
@@ -455,9 +465,46 @@ export default class UserModel {
         return this.#user ? this.#user.email : null;
     }
 
+    get quizzesCompleted() {
+        return this.#user ? (this.#user.quizzesCompleted || 0) : 0;
+    }
+
+    get profilePic() {
+        return this.#user ? this.#user.profilePic : null;
+    }
+
+    setProfilePic(url) {
+        if (!this.#user) return;
+        this.#user.profilePic = url;
+        this._syncCurrentUser();
+    }
+
     // Admin é agora determinado pelo role do user (não por flag global)
     get isAdmin() {
         return this.#user ? this.#user.role === 'admin' : false;
+    }
+
+    // ── Cooldown do Quiz ──
+    canTakeQuiz() {
+        if (!this.#user || !this.#user.lastQuizTime) return { canTake: true, remainingMinutes: 0 };
+        
+        const lastTime = new Date(this.#user.lastQuizTime).getTime();
+        const now = new Date().getTime();
+        const diffMs = now - lastTime;
+        const cooldownMs = 30 * 60 * 1000; // 30 minutos em milissegundos
+        
+        if (diffMs >= cooldownMs) {
+            return { canTake: true, remainingMinutes: 0 };
+        }
+        
+        const remainingMinutes = Math.ceil((cooldownMs - diffMs) / (60 * 1000));
+        return { canTake: false, remainingMinutes: remainingMinutes };
+    }
+
+    setLastQuizTime() {
+        if (!this.#user) return;
+        this.#user.lastQuizTime = new Date().toISOString();
+        this._syncCurrentUser();
     }
 
     // Mantido para compatibilidade — agora usa o role
