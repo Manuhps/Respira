@@ -1,6 +1,6 @@
 # 🍃 Respira
 
-**Respira** é uma Web Application (Single Page Application) desenvolvida com **Vanilla JavaScript**, desenhada para ajudar jovens e adultos a lidar com a Ansiedade Social através de exposição gradual, gamificação e técnicas de relaxamento.
+**Respira** é uma Web Application (Single Page Application) desenvolvida com **JavaScript, HTML e CSS**, desenhada para ajudar jovens e adultos a lidar com a Ansiedade Social através de exposição gradual, gamificação e técnicas de relaxamento.
 
 Este projeto foi desenvolvido como trabalho final da disciplina de **Programação Orientada a Objetos (POO)**.
 
@@ -22,13 +22,13 @@ Este projeto foi desenvolvido como trabalho final da disciplina de **Programaç�
 
 ## 🏗️ Arquitetura e Tecnologias
 
-O projeto foi construído **estritamente em Vanilla JS, HTML e CSS**, sem recurso a bibliotecas ou frameworks externas, respeitando na íntegra as regras académicas estipuladas.
+O projeto foi construído **estritamente em JavaScript, HTML e CSS**, sem recurso a bibliotecas ou frameworks externas, respeitando na íntegra as regras académicas estipuladas.
 
-- **Padrão MVC (Model-View-Controller):** Separação rigorosa entre a lógica de negócio (`Models`), a manipulação do DOM (`Views`) e o maestro da navegação (`Controller`).
+- **Padrão MVC (Model-View-Controller):** Separação rigorosa entre a lógica MVC (`Models`), a manipulação do DOM (`Views`) e o controlo de navegação (`Controller`).
 - **Programação Orientada a Objetos (POO):** Utilização de Classes (`class`), Herança (`extends BaseView`), Encapsulamento de dados (variáveis privadas `#`), Métodos Estáticos e Getters.
 - **Persistência de Dados (`localStorage`):** Toda a informação é guardada localmente, com mecanismos de migração automática para contas antigas e proteção de dados nulos.
 - **Mock Server:** Um módulo inteligente (`js/utils/mockServer.js`) que deteta arranques a limpo e injeta os dados estruturais iniciais (cenários, badges, admin).
-- **Design Clean & Responsivo:** Interface com cores creme suaves que promovem a calma, totalmente adaptável a ecrãs de telemóvel e computador.
+- **Design Clean & Responsivo:** Interface com cores creme suaves que promovem a calma, totalmente adaptável a ecrãs de computador.
 
 ---
 

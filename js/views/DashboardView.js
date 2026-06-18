@@ -110,11 +110,16 @@ export default class DashboardView extends BaseView {
     //  PERFIL (modal expandido com favoritos, badges, histórico)
     // ═══════════════════════════════════════
 
-    renderProfileModal(userName, points, ventinhos, streakCount, quote, badges, badgeDefs, historyCount, favCount) {
+    renderProfileModal(userName, points, ventinhos, streakCount, quote, badges, badgeDefs, historyCount, favCount, quizzesCount, profilePic, changePicCallback) {
         this.closeModal();
 
-        // Gerar iniciais do nome para a foto de perfil
-        const initials = userName.split(' ').map(n => n.charAt(0).toUpperCase()).slice(0, 2).join('');
+        let avatarHtml = '';
+        if (profilePic) {
+            avatarHtml = `<img src="${profilePic}" class="profile-avatar-img" alt="Foto de Perfil" />`;
+        } else {
+            const initials = userName.split(' ').map(n => n.charAt(0).toUpperCase()).slice(0, 2).join('');
+            avatarHtml = `<div class="profile-initials">${initials}</div>`;
+        }
 
         // Badges conquistados
         let badgesHtml = '<p class="admin-empty">Ainda sem conquistas.</p>';
@@ -136,7 +141,11 @@ export default class DashboardView extends BaseView {
                 <h3 class="modal-title">Perfil</h3>
 
                 <div class="profile-avatar">
-                    <div class="profile-initials">${initials}</div>
+                    <div style="position: relative;">
+                        ${avatarHtml}
+                        <button class="btn-notif" id="btnChangePic" title="Trocar Foto" style="position:absolute; bottom: 0; right: 0; font-size:16px; background: white; border-radius: 50%; padding: 5px; box-shadow: 0 2px 6px rgba(0,0,0,0.2);">✏️</button>
+                    </div>
+                    <input type="file" id="profilePicInput" accept="image/*" style="display: none;" />
                     <p class="avatar-label">${userName}</p>
                 </div>
 
@@ -162,6 +171,10 @@ export default class DashboardView extends BaseView {
                         <strong>${historyCount}</strong>
                     </div>
                     <div class="profile-row">
+                        <span>Quizzes feitos</span>
+                        <strong>🧠 ${quizzesCount}</strong>
+                    </div>
+                    <div class="profile-row">
                         <span>Favoritos</span>
                         <strong>❤️ ${favCount}</strong>
                     </div>
@@ -184,6 +197,28 @@ export default class DashboardView extends BaseView {
             e.preventDefault();
             this.closeModal();
         });
+
+        const btnChangePic = document.getElementById('btnChangePic');
+        const profilePicInput = document.getElementById('profilePicInput');
+
+        if (btnChangePic && profilePicInput) {
+            btnChangePic.addEventListener('click', (e) => {
+                e.preventDefault();
+                profilePicInput.click();
+            });
+
+            profilePicInput.addEventListener('change', (e) => {
+                const file = e.target.files[0];
+                if (file) {
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        const base64String = event.target.result;
+                        if (changePicCallback) changePicCallback(base64String);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            });
+        }
 
         overlay.addEventListener('click', (e) => {
             if (e.target === overlay) this.closeModal();

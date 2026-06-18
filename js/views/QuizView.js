@@ -63,7 +63,7 @@ export default class QuizView extends BaseView {
 
     // ── Feedback de uma resposta ──
     renderAnswerFeedback(isCorrect, explanation, pointsGained, nextCallback) {
-        const title = isCorrect ? '✅ Correto!' : '❌ Incorreto';
+        const title = isCorrect ? 'Correto!' : 'Incorreto';
         const pointsHtml = pointsGained > 0
             ? `<p class="points-gain">+${pointsGained} Pontos de Brisa!</p>`
             : '';
@@ -105,7 +105,7 @@ export default class QuizView extends BaseView {
                     <p class="points-gain">+${totalPoints} Pontos de Brisa no total!</p>
                 </div>
                 <div class="options">
-                    <button id="btnQuizDone">Voltar ao Dashboard</button>
+                    <button id="btnQuizDone">Voltar a Pagina Principal</button>
                 </div>
             </div>
         `;

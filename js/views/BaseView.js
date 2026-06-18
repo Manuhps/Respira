@@ -55,6 +55,46 @@ export default class BaseView {
         });
     }
 
+    showConfirmModal(title, message, confirmText, cancelText, onConfirmCallback, onCancelCallback) {
+        this.closeModal();
+
+        const overlay = document.createElement('div');
+        overlay.id = 'respira-modal-overlay';
+        overlay.className = 'modal-overlay';
+
+        overlay.innerHTML = `
+            <div class="modal" role="dialog" aria-modal="true">
+                <h3 class="modal-title">${title}</h3>
+                <p class="modal-message">${message}</p>
+                <div class="modal-actions">
+                    <button type="button" id="respira-modal-btn-confirm">${confirmText}</button>
+                    <button type="button" id="respira-modal-btn-cancel" class="btn-secondary">${cancelText}</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(overlay);
+
+        document.getElementById('respira-modal-btn-confirm').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.closeModal();
+            if (onConfirmCallback) onConfirmCallback();
+        });
+
+        document.getElementById('respira-modal-btn-cancel').addEventListener('click', (e) => {
+            e.preventDefault();
+            this.closeModal();
+            if (onCancelCallback) onCancelCallback();
+        });
+
+        overlay.addEventListener('click', (e) => {
+            if (e.target === overlay) {
+                this.closeModal();
+                if (onCancelCallback) onCancelCallback();
+            }
+        });
+    }
+
     /**
      * Modal com input (username) e botões Confirmar/Usar nome real.
      * Usamos callbacks para manter a matéria do aluno (sem Promises).
